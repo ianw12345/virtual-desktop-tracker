@@ -1,6 +1,6 @@
 @echo off
-REM Virtual Desktop Displayer - Startup Script
-REM This script starts the Virtual Desktop Displayer automatically
+REM Virtual Desktop Tracker startup script
+REM This script starts the release GUI from the repository location.
 
-cd /d "c:\Users\ANK\repos\virtual-desktop-tracker\VirtualDesktopDisplayer"
-start "" "bin\Debug\net9.0-windows\VirtualDesktopDisplayer.exe"
+set "APP=%~dp0VirtualDesktopDisplayer\bin\Release\net9.0-windows\VirtualDesktopDisplayer.exe"
+if exist "%APP%" start "" "%APP%"

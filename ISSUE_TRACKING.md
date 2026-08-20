@@ -10,7 +10,7 @@ The Virtual Desktop Tracker now includes issue tracking integration that allows 
 ### Setup Issue Tracking
 
 1. Right-click on the desktop display
-2. Select "Configure Issue Tracking"
+2. Select **Configure → Issue Tracking**
 3. Configure the following settings:
 
 #### Enable Issue Tracking
@@ -46,7 +46,7 @@ Use the test section in the configuration dialog to verify your settings:
 ### Open Current Issue
 1. Name your virtual desktop to include an issue identifier (e.g., "APP-5482: Fix login bug")
 2. Right-click on the desktop display
-3. Select "Open Current Issue"
+3. Select **Extras → Open Current Issue**
 4. The issue will open in your default browser
 
 ### Desktop Naming Examples
@@ -97,6 +97,6 @@ Issue tracking settings are stored in the application's configuration and persis
 
 ## Menu Integration
 
-The feature adds two new menu options to the right-click context menu:
-- **Open Current Issue**: Opens the issue found in the current desktop name
-- **Configure Issue Tracking**: Opens the configuration dialog
+The feature is available from the right-click context menu:
+- **Extras → Open Current Issue**: Opens the issue found in the current desktop name
+- **Configure → Issue Tracking**: Opens the configuration dialog
