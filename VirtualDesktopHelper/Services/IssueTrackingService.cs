@@ -31,7 +31,7 @@ namespace VirtualDesktopHelper.Services
 
             try
             {
-                var regex = new Regex(_config.IssueFormatRegex, RegexOptions.IgnoreCase);
+                var regex = new Regex(_config.IssueFormatRegex);
                 var match = regex.Match(desktopName);
                 
                 if (match.Success)
@@ -139,7 +139,8 @@ namespace VirtualDesktopHelper.Services
             {
                 // Test the template with a dummy issue ID
                 var testUrl = string.Format(template, "TEST-123");
-                return Uri.IsWellFormedUriString(testUrl, UriKind.Absolute);
+                return Uri.TryCreate(testUrl, UriKind.Absolute, out Uri? uri) &&
+                       (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps);
             }
             catch (Exception)
             {

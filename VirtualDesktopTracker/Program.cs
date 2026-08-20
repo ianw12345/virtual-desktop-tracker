@@ -304,7 +304,7 @@ namespace VirtualDesktopTracker
 			await EstimateWorkingHours(targetDate);
 		}
 
-		static async Task EstimateWorkingHours(DateTime targetDate)
+		static Task EstimateWorkingHours(DateTime targetDate)
 		{
 			try
 			{
@@ -358,6 +358,8 @@ namespace VirtualDesktopTracker
 					Console.WriteLine($"Inner exception: {ex.InnerException.Message}");
 				}
 			}
+
+			return Task.CompletedTask;
 		}
 
 		static string FormatHours(double hours)
@@ -418,6 +420,7 @@ namespace VirtualDesktopTracker
 					break;
 				}
 			}
+
 		}
 	}
 }

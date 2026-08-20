@@ -208,7 +208,9 @@ namespace VirtualDesktopHelper.Services
 
             foreach (var entry in sortedEntries)
             {
-                if (merged.Any() && merged.Last().DesktopName == entry.DesktopName)
+                if (merged.Any() &&
+                    merged.Last().DesktopName == entry.DesktopName &&
+                    entry.StartTime >= merged.Last().EndTime)
                 {
                     // Extend the previous record to include this one (exactly like Python version)
                     var prevRecord = merged.Last();
@@ -262,7 +264,7 @@ namespace VirtualDesktopHelper.Services
                     EndTime = entry.EndTime!.Value,
                     StartMinutes = GetMinutesFromMidnight(entry.StartTime),
                     EndMinutes = GetMinutesFromMidnight(entry.EndTime!.Value),
-                    DurationMinutes = Math.Ceiling(entry.Duration.TotalMinutes) // Ceil to nearest minute like Python
+                    DurationMinutes = entry.Duration.TotalMinutes
                 })
                 .OrderBy(e => e.StartMinutes)
                 .ToList();
@@ -276,8 +278,8 @@ namespace VirtualDesktopHelper.Services
             return workingEntries.Select(entry => new DesktopUsageEntry
             {
                 DesktopName = entry.DesktopName,
-                StartTime = entry.StartTime.Date.AddMinutes(entry.StartMinutes), // Floor to minute precision
-                EndTime = entry.EndTime.Date.AddMinutes(entry.EndMinutes) // Floor to minute precision
+                StartTime = entry.StartTime,
+                EndTime = entry.EndTime
             }).ToList();
         }
 

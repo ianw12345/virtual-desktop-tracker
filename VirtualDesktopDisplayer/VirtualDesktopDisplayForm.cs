@@ -1418,66 +1418,7 @@ namespace VirtualDesktopDisplayer
         /// <returns>The entered text, or null if cancelled.</returns>
         private string? ShowInputDialog(string title, string prompt, string defaultValue = "")
         {
-            Form inputDialog = new Form()
-            {
-                Width = 400,
-                Height = 200,
-                FormBorderStyle = FormBorderStyle.FixedDialog,
-                Text = title,
-                StartPosition = FormStartPosition.CenterParent,
-                MaximizeBox = false,
-                MinimizeBox = false
-            };
-
-            Label promptLabel = new Label()
-            {
-                Left = 10,
-                Top = 10,
-                Width = 360,
-                Height = 60,
-                Text = prompt
-            };
-
-            TextBox inputTextBox = new TextBox()
-            {
-                Left = 10,
-                Top = 80,
-                Width = 360,
-                Text = defaultValue
-            };
-
-            Button okButton = new Button()
-            {
-                Text = "OK",
-                Left = 215,
-                Width = 75,
-                Top = 110,
-                DialogResult = DialogResult.OK
-            };
-
-            Button cancelButton = new Button()
-            {
-                Text = "Cancel",
-                Left = 295,
-                Width = 75,
-                Top = 110,
-                DialogResult = DialogResult.Cancel
-            };
-
-            okButton.Click += (sender, e) => { inputDialog.Close(); };
-            cancelButton.Click += (sender, e) => { inputDialog.Close(); };
-
-            inputDialog.Controls.Add(promptLabel);
-            inputDialog.Controls.Add(inputTextBox);
-            inputDialog.Controls.Add(okButton);
-            inputDialog.Controls.Add(cancelButton);
-            inputDialog.AcceptButton = okButton;
-            inputDialog.CancelButton = cancelButton;
-
-            inputTextBox.SelectAll();
-            inputTextBox.Focus();
-
-            return inputDialog.ShowDialog() == DialogResult.OK ? inputTextBox.Text.Trim() : null;
+            return _applicationService.ShowTextInputDialog(this, title, prompt, defaultValue);
         }
 
         private void OnOpenCurrentIssueClick(object? sender, EventArgs e)
@@ -1787,65 +1728,7 @@ namespace VirtualDesktopDisplayer
         /// <param name="message">The message to display in the toast notification.</param>
         private void ShowToastNotification(string message)
         {
-            // Create a simple toast form
-            var toast = new Form()
-            {
-                FormBorderStyle = FormBorderStyle.None,
-                BackColor = Color.FromArgb(45, 45, 48), // Dark background
-                ForeColor = Color.White,
-                StartPosition = FormStartPosition.Manual,
-                TopMost = true,
-                ShowInTaskbar = false,
-                Size = new Size(300, 60),
-                Text = "Toast Notification"
-            };
-
-            // Add label with message
-            var label = new Label()
-            {
-                Text = message,
-                ForeColor = Color.White,
-                BackColor = Color.Transparent,
-                Font = new Font("Segoe UI", 9F, FontStyle.Regular),
-                TextAlign = ContentAlignment.MiddleCenter,
-                Dock = DockStyle.Fill,
-                Padding = new Padding(10)
-            };
-
-            toast.Controls.Add(label);
-
-            // Position the toast near the main form (bottom right area)
-            var screen = Screen.FromControl(this);
-            var x = screen.WorkingArea.Right - toast.Width - 20;
-            var y = screen.WorkingArea.Bottom - toast.Height - 60; // Above the main form
-            toast.Location = new Point(x, y);
-
-            // Set up timer to close the toast
-            var timer = new System.Windows.Forms.Timer();
-            timer.Interval = 2000; // 2 seconds
-            timer.Tick += (sender, e) =>
-            {
-                timer.Stop();
-                timer.Dispose();
-                
-                // Fade out effect (optional)
-                try
-                {
-                    if (!toast.IsDisposed)
-                    {
-                        toast.Hide();
-                        toast.Dispose();
-                    }
-                }
-                catch
-                {
-                    // Ignore disposal errors
-                }
-            };
-
-            // Show the toast and start timer
-            toast.Show();
-            timer.Start();
+            _applicationService.ShowToast(this, message);
         }
     }
 }

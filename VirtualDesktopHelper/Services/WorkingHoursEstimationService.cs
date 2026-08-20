@@ -71,7 +71,8 @@ namespace VirtualDesktopHelper.Services
             var isStillWorking = IsStillWorking(lastEntry);
             
             // Calculate finish time estimation
-            var hoursRemaining = Math.Max(0, StandardWorkHoursPerDay - totalWorkedHours);
+            var remainingHours = StandardWorkHoursPerDay - totalWorkedHours;
+            var hoursRemaining = remainingHours <= 0.000001 ? 0 : remainingHours;
             DateTime? estimatedFinishTime = null;
             
             if (isStillWorking && hoursRemaining > 0)
@@ -79,7 +80,7 @@ namespace VirtualDesktopHelper.Services
                 // If still working, estimate finish time based on current time + remaining hours
                 estimatedFinishTime = DateTime.Now.AddHours(hoursRemaining);
             }
-            else if (totalWorkedHours >= StandardWorkHoursPerDay)
+            else if (hoursRemaining == 0)
             {
                 // Already worked enough hours
                 estimatedFinishTime = lastEntry?.EndTime ?? DateTime.Now;

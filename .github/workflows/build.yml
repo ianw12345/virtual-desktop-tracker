@@ -1,0 +1,26 @@
+name: build
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x
+      - name: Build VirtualDesktop helper executables
+        shell: pwsh
+        run: |
+          git clone https://github.com/MScholtes/VirtualDesktop.git VirtualDesktop
+          & 'C:\Windows\Microsoft.NET\Framework\v4.0.30319\csc.exe' .\VirtualDesktop\VirtualDesktop11.cs /out:.\VirtualDesktop\VirtualDesktop11.exe /win32icon:.\VirtualDesktop\VirtualDesktop.ico
+          & 'C:\Windows\Microsoft.NET\Framework\v4.0.30319\csc.exe' .\VirtualDesktop\VirtualDesktop11-24H2.cs /out:.\VirtualDesktop\VirtualDesktop11-24H2.exe /win32icon:.\VirtualDesktop\VirtualDesktop.ico
+      - name: Restore
+        run: dotnet restore virtual-desktop-tracker.sln
+      - name: Test
+        run: dotnet test virtual-desktop-tracker.sln --configuration Release --no-restore
+      - name: Build applications
+        run: dotnet build virtual-desktop-tracker.sln --configuration Release --no-restore
