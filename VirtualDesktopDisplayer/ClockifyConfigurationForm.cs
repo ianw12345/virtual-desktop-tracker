@@ -20,6 +20,7 @@ namespace VirtualDesktopDisplayer
         private readonly TextBox _projectNameTextBox = new() { ReadOnly = true };
         private readonly CheckBox _billableCheckBox = new() { Text = "Create entries as billable" };
         private readonly Label _statusLabel = new() { AutoSize = false, ForeColor = Color.DimGray };
+        private List<ClockifyProjectMapping> _projectMappings = new();
 
         public ClockifyConfigurationForm()
         {
@@ -51,6 +52,7 @@ namespace VirtualDesktopDisplayer
             _billableCheckBox.Location = new Point(140, 210);
             _billableCheckBox.Size = new Size(260, 24);
             Controls.Add(_billableCheckBox);
+            AddButton("Desktop assignments…", 408, 208, 164, (_, _) => ManageDesktopAssignments());
 
             _statusLabel.Location = new Point(16, 242);
             _statusLabel.Size = new Size(556, 28);
@@ -64,6 +66,7 @@ namespace VirtualDesktopDisplayer
             _projectIdTextBox.Text = _configuration.DefaultProjectId;
             _projectNameTextBox.Text = _configuration.DefaultProjectName;
             _billableCheckBox.Checked = _configuration.IsBillable;
+            _projectMappings = _configuration.ProjectMappings.Select(Clone).ToList();
         }
 
         private void AddField(string labelText, TextBox textBox, int y, int width)
@@ -87,8 +90,26 @@ namespace VirtualDesktopDisplayer
             WorkspaceId = _workspaceIdTextBox.Text.Trim(),
             DefaultProjectId = _projectIdTextBox.Text.Trim(),
             DefaultProjectName = _projectNameTextBox.Text.Trim(),
-            IsBillable = _billableCheckBox.Checked
+            IsBillable = _billableCheckBox.Checked,
+            ProjectMappings = _projectMappings.Select(Clone).ToList()
         };
+
+        private void ManageDesktopAssignments()
+        {
+            ClockifyConfiguration draft = CreateDraftConfiguration();
+            if (string.IsNullOrWhiteSpace(draft.ApiKey) || string.IsNullOrWhiteSpace(draft.WorkspaceId))
+            {
+                SetStatus("Enter an API key and workspace before assigning desktop projects.", Color.Firebrick);
+                return;
+            }
+
+            using var mappingsForm = new ClockifyDesktopProjectMappingsForm(draft);
+            if (mappingsForm.ShowDialog(this) == DialogResult.OK)
+            {
+                _projectMappings = mappingsForm.Mappings.Select(Clone).ToList();
+                SetStatus($"{_projectMappings.Count} desktop assignment(s) ready to save.", Color.ForestGreen);
+            }
+        }
 
         private async Task TestConnectionAsync()
         {
@@ -176,6 +197,7 @@ namespace VirtualDesktopDisplayer
             _configuration.DefaultProjectId = draft.DefaultProjectId;
             _configuration.DefaultProjectName = draft.DefaultProjectName;
             _configuration.IsBillable = draft.IsBillable;
+            _configuration.ProjectMappings = draft.ProjectMappings;
             _configuration.SaveConfiguration();
             DialogResult = DialogResult.OK;
         }
@@ -185,6 +207,14 @@ namespace VirtualDesktopDisplayer
             _statusLabel.Text = text;
             _statusLabel.ForeColor = color;
         }
+
+        private static ClockifyProjectMapping Clone(ClockifyProjectMapping mapping) => new()
+        {
+            DesktopName = mapping.DesktopName,
+            ProjectId = mapping.ProjectId,
+            ProjectName = mapping.ProjectName,
+            Order = mapping.Order
+        };
     }
 
     internal sealed class ClockifySelectionForm<T> : Form where T : class

@@ -20,19 +20,20 @@ namespace VirtualDesktopHelper.Tests.Configuration
         }
 
         [Fact]
-        public void GetProjectIdForDesktop_UsesFirstMatchingKeywordBeforeDefault()
+        public void GetProjectIdForDesktop_UsesExactDesktopMappingBeforeDefault()
         {
             var configuration = new ClockifyConfiguration
             {
                 DefaultProjectId = "default",
                 ProjectMappings = new()
                 {
-                    new ClockifyProjectMapping { ProjectId = "later", Keywords = new() { "work" }, Order = 1 },
-                    new ClockifyProjectMapping { ProjectId = "first", Keywords = new() { "client" }, Order = 0 }
+                    new ClockifyProjectMapping { ProjectId = "later", DesktopName = "Development", Order = 1 },
+                    new ClockifyProjectMapping { ProjectId = "first", DesktopName = "Client work", Order = 0 }
                 }
             };
 
-            configuration.GetProjectIdForDesktop("Client work").Should().Be("first");
+            configuration.GetProjectIdForDesktop("client work").Should().Be("first");
+            configuration.GetProjectIdForDesktop("Client work notes").Should().Be("default");
             configuration.GetProjectIdForDesktop("Personal").Should().Be("default");
         }
     }

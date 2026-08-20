@@ -145,16 +145,15 @@ namespace VirtualDesktopHelper.Configuration
         }
     }
 
-    /// <summary>Maps desktop-name keywords to a Clockify project.</summary>
+    /// <summary>Maps one exact virtual-desktop name to a Clockify project.</summary>
     public class ClockifyProjectMapping
     {
+        public string DesktopName { get; set; } = "";
         public string ProjectId { get; set; } = "";
         public string ProjectName { get; set; } = "";
-        public List<string> Keywords { get; set; } = new List<string>();
         public int Order { get; set; }
 
         public bool Matches(string desktopName) =>
-            !string.IsNullOrWhiteSpace(desktopName) &&
-            Keywords.Any(keyword => !string.IsNullOrWhiteSpace(keyword) && desktopName.Contains(keyword, StringComparison.OrdinalIgnoreCase));
+            string.Equals(DesktopName, desktopName, StringComparison.OrdinalIgnoreCase);
     }
 }

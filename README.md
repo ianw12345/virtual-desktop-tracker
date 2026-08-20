@@ -80,7 +80,7 @@ The report dialog creates `usage_report_YYYY-MM-DD.txt` and `usage_report_YYYY-M
 
 - [Issue tracking setup](ISSUE_TRACKING.md) explains regex patterns and issue URL templates.
 - Timely is configured from the app with **Configure → Timely**. It retains the existing cookie-based integration.
-- Clockify is configured from the app with **Configure → Clockify**. Enter an API key, choose the workspace and default project, then use **Upload to Clockify**. The app creates one regular Clockify time entry per consolidated desktop interval; the entry description is `Virtual desktop: <desktop name>`.
+- Clockify is configured from the app with **Configure → Clockify**. Enter an API key, choose the workspace and default project, then use **Desktop assignments…** to map named virtual desktops to different Clockify projects. An exact desktop-name assignment overrides the default project. Use **Upload to Clockify** to create one regular time entry per consolidated desktop interval; the entry description is `Virtual desktop: <desktop name>`.
 - Clockify uses its public v1 API and an `X-Api-Key` header. The key is not written to the usage log or error messages. See the [Clockify API documentation](https://docs.clockify.me/).
 
 ## Test and CI
