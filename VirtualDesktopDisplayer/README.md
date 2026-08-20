@@ -6,7 +6,7 @@
 
 - **Right-click the display** to rename desktops, open reports and logs, view the timeline, configure integrations, or exit.
 - **Double-click the display** to exit.
-- **Configure → Use mouse Back/Forward buttons to switch desktops** optionally maps the dedicated mouse Back button to the previous desktop and the Forward button to the next desktop.
+- **Configure → Use mouse Back/Forward buttons to switch desktops** optionally maps the dedicated mouse Back button to the previous desktop and the Forward button to the next desktop, wrapping around at either end.
 
 The mouse option is disabled by default and is stored in the tracker configuration. When enabled, it consumes those buttons globally while the app is running, so foreground programs do not also navigate back or forward.
 

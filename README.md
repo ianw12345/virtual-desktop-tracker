@@ -65,7 +65,7 @@ The `publish` directory contains exactly one self-contained executable. For deve
    - **Tracking Status** shows the current desktop, most recent poll, intervals, log location, and last tracking error.
    - **View Log JSON** and **Open Log Folder** provide direct access to persisted data.
 5. Use **Configure** to set up Timely, project mappings, issue tracking, and mouse navigation.
-   - Enable **Use mouse Back/Forward buttons to switch desktops** to map the dedicated Back button to the previous desktop and the Forward button to the next desktop.
+   - Enable **Use mouse Back/Forward buttons to switch desktops** to map the dedicated Back button to the previous desktop and the Forward button to the next desktop. The order is cyclic: `1 → 2 → 3 → 1` and `1 → 3` when navigating back.
    - While enabled, the app consumes these two button presses globally; browsers and other applications will not also receive their normal Back/Forward action.
 
 ## Data and configuration

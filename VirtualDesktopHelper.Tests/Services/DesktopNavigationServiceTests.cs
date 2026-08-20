@@ -22,16 +22,29 @@ namespace VirtualDesktopHelper.Tests.Services
         }
 
         [Fact]
-        public void Navigate_Previous_DoesNotSwitchBeforeFirstDesktop()
+        public void Navigate_Previous_WrapsFromFirstDesktopToLastDesktop()
         {
             var desktopNameService = CreateService(new[] { "Planning", "Development" }, "Planning");
             var navigationService = new DesktopNavigationService(desktopNameService.Object);
 
             DesktopNavigationResult result = navigationService.Navigate(DesktopNavigationDirection.Previous);
 
-            result.WasSwitched.Should().BeFalse();
-            result.TargetDesktopName.Should().BeNull();
-            desktopNameService.Verify(service => service.SwitchToDesktop(It.IsAny<string>()), Times.Never);
+            result.WasSwitched.Should().BeTrue();
+            result.TargetDesktopName.Should().Be("Development");
+            desktopNameService.Verify(service => service.SwitchToDesktop("Development"), Times.Once);
+        }
+
+        [Fact]
+        public void Navigate_Next_WrapsFromLastDesktopToFirstDesktop()
+        {
+            var desktopNameService = CreateService(new[] { "Planning", "Development" }, "Development");
+            var navigationService = new DesktopNavigationService(desktopNameService.Object);
+
+            DesktopNavigationResult result = navigationService.Navigate(DesktopNavigationDirection.Next);
+
+            result.WasSwitched.Should().BeTrue();
+            result.TargetDesktopName.Should().Be("Planning");
+            desktopNameService.Verify(service => service.SwitchToDesktop("Planning"), Times.Once);
         }
 
         [Fact]

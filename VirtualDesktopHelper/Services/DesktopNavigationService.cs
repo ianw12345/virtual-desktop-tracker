@@ -5,7 +5,8 @@ using VirtualDesktopHelper.Interfaces;
 namespace VirtualDesktopHelper.Services
 {
     /// <summary>
-    /// Switches to the desktop immediately before or after the currently visible desktop.
+    /// Switches to the desktop immediately before or after the currently visible desktop,
+    /// wrapping from the first desktop to the last and vice versa.
     /// The service is independent from input devices so it can be reused by mouse buttons,
     /// keyboard shortcuts, or future UI controls.
     /// </summary>
@@ -29,11 +30,9 @@ namespace VirtualDesktopHelper.Services
                 return DesktopNavigationResult.Unavailable(currentDesktopName);
             }
 
-            int targetIndex = currentIndex + (direction == DesktopNavigationDirection.Next ? 1 : -1);
-            if (targetIndex < 0 || targetIndex >= desktopNames.Count)
-            {
-                return DesktopNavigationResult.AtBoundary(currentDesktopName);
-            }
+            int targetIndex = direction == DesktopNavigationDirection.Next
+                ? (currentIndex + 1) % desktopNames.Count
+                : (currentIndex - 1 + desktopNames.Count) % desktopNames.Count;
 
             string targetDesktopName = desktopNames[targetIndex];
             bool switched = _desktopNameService.SwitchToDesktop(targetDesktopName);
@@ -56,7 +55,6 @@ namespace VirtualDesktopHelper.Services
         string? ErrorMessage)
     {
         public static DesktopNavigationResult Switched(string current, string target) => new(current, target, true, null);
-        public static DesktopNavigationResult AtBoundary(string current) => new(current, null, false, null);
         public static DesktopNavigationResult Unavailable(string current) => new(current, null, false, "The current desktop could not be located.");
         public static DesktopNavigationResult Failed(string current, string target) => new(current, target, false, $"Could not switch to '{target}'.");
     }
