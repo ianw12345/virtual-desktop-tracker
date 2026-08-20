@@ -26,6 +26,7 @@ namespace VirtualDesktopDisplayer
         private readonly VirtualDesktopWindowService _virtualDesktopService;
         private readonly ApplicationService _applicationService;
         private readonly TrackerConfiguration _config;
+        private readonly DesktopTrackingCoordinator _trackingCoordinator;
 
         // UI Components
         private System.Windows.Forms.Timer? updateTimer;
@@ -33,8 +34,6 @@ namespace VirtualDesktopDisplayer
         private TextBox? renameTextBox;
 
         // State
-        private string _lastDesktopName = "";
-        private bool _isFirstRun = true;
         private bool _isRenameMode = false;
 
         public VirtualDesktopDisplayForm(
@@ -48,6 +47,7 @@ namespace VirtualDesktopDisplayer
             _usageTracker = usageTracker ?? VirtualDesktopServiceProvider.GetUsageTracker();
             _screenStateDetector = screenStateDetector ?? VirtualDesktopServiceProvider.GetScreenStateDetector();
             _config = config ?? TrackerConfiguration.Instance;
+            _trackingCoordinator = new DesktopTrackingCoordinator(_desktopNameService, _screenStateDetector, _usageTracker);
 
             // Initialize services
             _windowPositionService = new WindowPositionService(_config);
@@ -165,12 +165,17 @@ namespace VirtualDesktopDisplayer
                 if (_isRenameMode)
                     return;
 
-                string currentDesktop = _desktopNameService.GetCurrentDesktopName();
+                DesktopTrackingUpdate trackingUpdate = _trackingCoordinator.Poll();
+                if (!string.IsNullOrEmpty(trackingUpdate.ErrorMessage))
+                {
+                    throw new InvalidOperationException(trackingUpdate.ErrorMessage);
+                }
+
+                string currentDesktop = trackingUpdate.DesktopName;
 
                 if (!string.IsNullOrEmpty(currentDesktop))
                 {
                     UpdateDisplayWithDesktopName(currentDesktop);
-                    TrackDesktopUsageIfChanged(currentDesktop);
                     UpdateTimerInterval(currentDesktop);
                 }
                 else
@@ -199,37 +204,6 @@ namespace VirtualDesktopDisplayer
             if (desktopLabel != null)
                 desktopLabel.Text = "Desktop: Unknown";
             this.Text = "Virtual Desktop Displayer - Unknown";
-        }
-
-        private void TrackDesktopUsageIfChanged(string currentDesktop)
-        {
-            if (currentDesktop != _lastDesktopName)
-            {
-                if (_isFirstRun)
-                {
-                    _usageTracker.TrackDesktopUsage(currentDesktop);
-                    _isFirstRun = false;
-                }
-                else if (!string.IsNullOrEmpty(_lastDesktopName))
-                {
-                    LogScreenStateTransitions(currentDesktop, _lastDesktopName);
-                    _usageTracker.TrackDesktopUsage(currentDesktop);
-                }
-
-                _lastDesktopName = currentDesktop;
-            }
-        }
-
-        private void LogScreenStateTransitions(string currentDesktop, string lastDesktop)
-        {
-            if (currentDesktop == "Screen Off" && lastDesktop != "Screen Off")
-            {
-                System.Diagnostics.Debug.WriteLine($"[{DateTime.Now:HH:mm:ss}] Screen locked/off detected");
-            }
-            else if (lastDesktop == "Screen Off" && currentDesktop != "Screen Off")
-            {
-                System.Diagnostics.Debug.WriteLine($"[{DateTime.Now:HH:mm:ss}] Screen unlocked/on detected");
-            }
         }
 
         private void UpdateTimerInterval(string currentDesktop)
@@ -266,7 +240,7 @@ namespace VirtualDesktopDisplayer
         {
             updateTimer?.Stop();
             updateTimer?.Dispose();
-            _usageTracker.StopTracking();
+            _trackingCoordinator.Stop();
             base.OnFormClosing(e);
         }
 
@@ -685,10 +659,7 @@ namespace VirtualDesktopDisplayer
                     {
                         desktopLabel.Text = newName;
                     }
-                    _lastDesktopName = newName;
-                    
-                    // Track the usage change
-                    _usageTracker.TrackDesktopUsage(newName);
+                    _trackingCoordinator.RecordDesktopName(newName);
                     
                     ShowToastNotification($"Desktop renamed to \"{newName}\".");
                 }
@@ -750,10 +721,7 @@ namespace VirtualDesktopDisplayer
                     {
                         desktopLabel.Text = newName;
                     }
-                    _lastDesktopName = newName;
-
-                    // Track the new name in usage so current state is reflected immediately.
-                    _usageTracker.TrackDesktopUsage(newName);
+                    _trackingCoordinator.RecordDesktopName(newName);
 
                     ShowToastNotification($"Desktop renamed to \"{newName}\" and today's entries updated.");
                 }
@@ -793,10 +761,7 @@ namespace VirtualDesktopDisplayer
                     {
                         desktopLabel.Text = desktopName;
                     }
-                    _lastDesktopName = desktopName;
-                    
-                    // Track the usage change
-                    _usageTracker.TrackDesktopUsage(desktopName);
+                    _trackingCoordinator.RecordDesktopName(desktopName);
                 }
                 else
                 {
@@ -831,10 +796,7 @@ namespace VirtualDesktopDisplayer
                     {
                         desktopLabel.Text = newDesktopName;
                     }
-                    _lastDesktopName = newDesktopName;
-                    
-                    // Track the usage change
-                    _usageTracker.TrackDesktopUsage(newDesktopName);
+                    _trackingCoordinator.RecordDesktopName(newDesktopName);
                 }
                 else
                 {
@@ -910,8 +872,7 @@ namespace VirtualDesktopDisplayer
                 if (success)
                 {
                     desktopLabel.Text = newName;
-                    _lastDesktopName = newName;
-                    _usageTracker.TrackDesktopUsage(newName);
+                    _trackingCoordinator.RecordDesktopName(newName);
                 }
                 else
                 {
@@ -1428,10 +1389,7 @@ namespace VirtualDesktopDisplayer
                     {
                         desktopLabel.Text = newName;
                     }
-                    _lastDesktopName = newName;
-
-                    // Track the new name in usage
-                    _usageTracker.TrackDesktopUsage(newName);
+                    _trackingCoordinator.RecordDesktopName(newName);
 
                     ShowToastNotification($"Desktop renamed to \"{newName}\" and today's entries updated.");
                 }
@@ -1719,7 +1677,7 @@ namespace VirtualDesktopDisplayer
                     {
                         desktopLabel.Text = newName;
                     }
-                    _lastDesktopName = newName;
+                    _trackingCoordinator.RecordDesktopName(newName);
 
                     ShowToastNotification($"Desktop renamed to \"{newName}\" and today's entries updated.");
                 }
@@ -1765,10 +1723,7 @@ namespace VirtualDesktopDisplayer
                     {
                         desktopLabel.Text = newName;
                     }
-                    _lastDesktopName = newName;
-                    
-                    // Track the usage change
-                    _usageTracker.TrackDesktopUsage(newName);
+                    _trackingCoordinator.RecordDesktopName(newName);
 
                     ShowToastNotification($"Desktop renamed to \"{newName}\" with clipboard ticket.");
                 }

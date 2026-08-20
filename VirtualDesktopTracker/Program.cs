@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -13,9 +12,6 @@ namespace VirtualDesktopTracker
 {
 	class Program
 	{
-		private static volatile bool _isRunning = true;
-		private static string _lastDesktopName = "";
-
 		static async Task<int> Main(string[] args)
 		{
 			try
@@ -48,7 +44,7 @@ namespace VirtualDesktopTracker
 				}
 
 				// Default behavior: start tracking
-				StartTracking();
+				await StartTrackingAsync();
 				return 0;
 			}
 			catch (Exception ex)
@@ -85,31 +81,40 @@ namespace VirtualDesktopTracker
 			Console.WriteLine("  VirtualDesktopTracker hours --date 2025-08-22");
 		}
 
-		static void StartTracking()
+		static async Task StartTrackingAsync()
 		{
 			Console.WriteLine("Virtual Desktop Tracker Started");
 			Console.WriteLine("Press Ctrl+C to stop tracking...");
 			
 			var usageTracker = new DesktopUsageTracker();
+			var config = TrackerConfiguration.Instance;
+			var screenStateDetector = new WindowsScreenStateDetector();
+			var errorHandler = new VirtualDesktopErrorHandler(config);
+			var desktopNameService = new WindowsDesktopNameService(screenStateDetector, errorHandler, config);
+			var trackingCoordinator = new DesktopTrackingCoordinator(desktopNameService, screenStateDetector, usageTracker);
+			using var cancellationSource = new CancellationTokenSource();
 			Console.WriteLine($"Log directory: {usageTracker.GetLogDirectory()}");
 			Console.WriteLine($"Current log file: {Path.GetFileName(usageTracker.GetCurrentLogFilePath())}");
 			Console.WriteLine();
 
-			// Handle Ctrl+C gracefully
-			Console.CancelKeyPress += (sender, e) => {
+			ConsoleCancelEventHandler cancelHandler = (sender, e) =>
+			{
 				e.Cancel = true;
-				_isRunning = false;
 				Console.WriteLine("\nShutting down tracker...");
-				
-				// Ensure the last active session is properly closed
-				usageTracker.StopTracking();
-				Console.WriteLine("Last session closed. Tracker stopped.");
+				cancellationSource.Cancel();
 			};
 
-			// Start tracking
-			TrackDesktopChanges(usageTracker);
-
-			Console.WriteLine("Tracker stopped.");
+			Console.CancelKeyPress += cancelHandler;
+			try
+			{
+				await TrackDesktopChangesAsync(trackingCoordinator, config, cancellationSource.Token);
+			}
+			finally
+			{
+				Console.CancelKeyPress -= cancelHandler;
+				trackingCoordinator.Stop();
+				Console.WriteLine("Last session closed. Tracker stopped.");
+			}
 		}
 
 		static async Task GenerateReportFromArgs(string[] args)
@@ -377,129 +382,41 @@ namespace VirtualDesktopTracker
 			return $"{h}h {m}m";
 		}
 
-		static void TrackDesktopChanges(DesktopUsageTracker usageTracker)
+		static async Task TrackDesktopChangesAsync(
+			DesktopTrackingCoordinator trackingCoordinator,
+			TrackerConfiguration config,
+			CancellationToken cancellationToken)
 		{
-			var config = TrackerConfiguration.Instance;
-			var screenStateDetector = new WindowsScreenStateDetector();
-			var errorHandler = new VirtualDesktopErrorHandler(config);
-			var desktopNameService = new WindowsDesktopNameService(screenStateDetector, errorHandler);
-
-			while (_isRunning)
+			while (!cancellationToken.IsCancellationRequested)
 			{
+				var trackingUpdate = trackingCoordinator.Poll();
+				if (!string.IsNullOrEmpty(trackingUpdate.ErrorMessage))
+				{
+					Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] Error: {trackingUpdate.ErrorMessage}");
+				}
+				else if (trackingUpdate.HasChanged)
+				{
+					if (string.IsNullOrEmpty(trackingUpdate.PreviousDesktopName))
+					{
+						Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] Initial desktop: {trackingUpdate.DesktopName}");
+					}
+					else
+					{
+						Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] Desktop changed: {trackingUpdate.PreviousDesktopName} -> {trackingUpdate.DesktopName}");
+					}
+				}
+
+				TimeSpan interval = trackingUpdate.IsScreenOff
+					? config.InactiveScreenUpdateInterval
+					: config.ActiveScreenUpdateInterval;
 				try
 				{
-					string currentDesktop = GetCurrentDesktopName(desktopNameService, screenStateDetector);
-					
-					if (!string.IsNullOrEmpty(currentDesktop) && currentDesktop != _lastDesktopName)
-					{
-						if (!string.IsNullOrEmpty(_lastDesktopName))
-						{
-							// Special handling for screen state transitions
-							if (currentDesktop == "Screen Off" && _lastDesktopName != "Screen Off")
-							{
-								Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] Screen locked/off detected - switching to low-frequency monitoring");
-							}
-							else if (_lastDesktopName == "Screen Off" && currentDesktop != "Screen Off")
-							{
-								Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] Screen unlocked/on detected - resuming normal monitoring");
-							}
-							
-							Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] Desktop changed: {_lastDesktopName} -> {currentDesktop}");
-						}
-						else
-						{
-							Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] Initial desktop: {currentDesktop}");
-						}
-
-						// Track the desktop usage (this automatically logs to file)
-						usageTracker.TrackDesktopUsage(currentDesktop);
-						_lastDesktopName = currentDesktop;
-					}
-
-					// Use different sleep intervals based on screen state
-					int sleepInterval = currentDesktop == "Screen Off" ? 10000 : 2000; // 10 seconds when screen off, 2 seconds when active
-					Thread.Sleep(sleepInterval);
+					await Task.Delay(interval, cancellationToken);
 				}
-				catch (Exception ex)
+				catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
 				{
-					Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] Error: {ex.Message}");
-					// Check every 2 seconds even on error
-					Thread.Sleep(2000);
+					break;
 				}
-			}
-		}
-
-		static string GetCurrentDesktopName(IWindowsDesktopNameService desktopNameService, IScreenStateDetector screenStateDetector)
-		{
-			try
-			{
-				// First check if screen is locked or off
-				if (screenStateDetector.IsScreenLockedOrOff())
-				{
-					return "Screen Off";
-				}
-
-				// Get the current desktop name using the service
-				return desktopNameService.GetCurrentDesktopName();
-			}
-			catch
-			{
-				try
-				{
-					// Check screen state again before fallback
-					if (screenStateDetector.IsScreenLockedOrOff())
-					{
-						return "Screen Off";
-					}
-
-					// Fallback to API method
-					return GetCurrentDesktopNameUsingAPI();
-				}
-				catch (Exception ex)
-				{
-					// If we still can't get desktop name, check if screen is off
-					if (screenStateDetector.IsScreenLockedOrOff())
-					{
-						return "Screen Off";
-					}
-					return $"Error: {ex.Message}";
-				}
-			}
-		}
-
-		static string GetCurrentDesktopNameUsingAPI()
-		{
-			try
-			{
-				// Use the external VirtualDesktop executable as fallback
-				var processInfo = new ProcessStartInfo
-				{
-					FileName = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "..", "VirtualDesktop", "VirtualDesktop11.exe"),
-					Arguments = "/GetCurrentDesktop",
-					UseShellExecute = false,
-					RedirectStandardOutput = true,
-					CreateNoWindow = true
-				};
-
-				using (var process = Process.Start(processInfo))
-				{
-					if (process != null)
-					{
-						string output = process.StandardOutput.ReadToEnd();
-						process.WaitForExit();
-						
-						if (process.ExitCode == 0 && !string.IsNullOrWhiteSpace(output))
-						{
-							return output.Trim();
-						}
-					}
-				}
-
-				return "Desktop 1"; // Fallback default
-			}
-			catch (Exception ex)
-			{
-				throw new Exception($"Failed to get desktop name using external API: {ex.Message}", ex);
 			}
 		}
 	}
