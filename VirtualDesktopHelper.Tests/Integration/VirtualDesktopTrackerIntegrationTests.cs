@@ -10,12 +10,12 @@ namespace VirtualDesktopHelper.Tests.Integration
     /// <summary>
     /// Integration tests that verify the interaction between multiple components.
     /// </summary>
-    public class VirtualDesktopTrackerIntegrationTests : IDisposable
+    public class DesktopUsageIntegrationTests : IDisposable
     {
         private readonly string _testDirectory;
         private readonly TrackerConfiguration _testConfig;
 
-        public VirtualDesktopTrackerIntegrationTests()
+        public DesktopUsageIntegrationTests()
         {
             // Create a test-specific directory
             _testDirectory = Path.Combine(Path.GetTempPath(), "VirtualDesktopIntegrationTests", Guid.NewGuid().ToString());

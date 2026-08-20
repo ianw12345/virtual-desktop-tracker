@@ -1,6 +1,6 @@
 # Virtual Desktop Tracker
 
-A comprehensive Windows application suite for tracking and managing virtual desktop usage throughout the day. The core functionality revolves around the **VirtualDesktopDisplayer**, which provides real-time virtual desktop monitoring with automatic time tracking and project detection capabilities.
+A Windows application for tracking and managing virtual desktop usage throughout the day. **VirtualDesktopDisplayer** is the single application and provides real-time virtual desktop monitoring, automatic time tracking, reports, and project detection.
 
 ## 🚀 Core Functionality
 
@@ -60,7 +60,6 @@ From the task view, you can also set some windows to be always visible on all de
 ```
 virtual-desktop-tracker/
 ├── VirtualDesktopDisplayer/          # Main GUI application
-├── VirtualDesktopTracker/            # Console application for tracking
 ├── VirtualDesktopHelper/             # Core library with shared functionality
 ├── VirtualDesktopHelper.Tests/      # Unit tests
 ├── VirtualDesktop/                   # External dependency (MScholtes/VirtualDesktop)
@@ -130,7 +129,9 @@ cd VirtualDesktopDisplayer\bin\Debug\net9.0-windows
 
 5. **View Reports**: Right-click on the display for options to:
    - View usage logs
-   - Generate reports
+   - Generate date-specific reports, including the former command-line consolidation options
+   - Estimate working hours for any selected date
+   - View the current tracking status
    - Open log folder
    - Configure settings
    - Exit application
@@ -190,8 +191,7 @@ For detailed setup instructions, see [ISSUE_TRACKING.md](ISSUE_TRACKING.md).
 
 ### Components
 
-- **VirtualDesktopDisplayer**: Main WinForms GUI application
-- **VirtualDesktopTracker**: Console application for command-line usage
+- **VirtualDesktopDisplayer**: The single WinForms application for display, tracking, analysis, and configuration
 - **VirtualDesktopHelper**: Core library containing:
   - Desktop name detection
   - Usage tracking services

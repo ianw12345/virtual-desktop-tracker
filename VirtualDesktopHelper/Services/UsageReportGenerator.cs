@@ -153,7 +153,6 @@ namespace VirtualDesktopHelper.Services
                 var json = JsonSerializer.Serialize(jsonReport, options);
                 await File.WriteAllTextAsync(jsonFilePath, json);
                 
-                Console.WriteLine($"JSON report saved to: {jsonFilePath}");
             }
             catch (Exception ex)
             {

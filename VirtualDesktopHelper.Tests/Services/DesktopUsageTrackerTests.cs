@@ -24,7 +24,7 @@ namespace VirtualDesktopHelper.Tests.Services
             _mockErrorHandler = new Mock<IVirtualDesktopErrorHandler>();
             
             // Create a test-specific configuration
-            _testDirectory = Path.Combine(Path.GetTempPath(), "VirtualDesktopTrackerTests", Guid.NewGuid().ToString());
+            _testDirectory = Path.Combine(Path.GetTempPath(), "VirtualDesktopUsageTests", Guid.NewGuid().ToString());
             _testConfig = new TrackerConfiguration
             {
                 LogDirectoryName = _testDirectory,

@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.Threading.Tasks;
 using VirtualDesktopHelper.Models;
 
 namespace VirtualDesktopHelper.Interfaces
@@ -38,11 +37,6 @@ namespace VirtualDesktopHelper.Interfaces
         /// </summary>
         /// <returns>Full path to the log directory.</returns>
         string GetLogDirectory();
-
-        /// <summary>
-        /// Generates a comprehensive usage report from all sessions.
-        /// </summary>
-        Task GenerateUsageReportAsync();
 
         /// <summary>
         /// Closes and persists the currently active desktop session.

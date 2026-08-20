@@ -27,6 +27,7 @@ namespace VirtualDesktopDisplayer
         private readonly ApplicationService _applicationService;
         private readonly TrackerConfiguration _config;
         private readonly DesktopTrackingCoordinator _trackingCoordinator;
+        private readonly UsageAnalysisService _usageAnalysisService;
 
         // UI Components
         private System.Windows.Forms.Timer? updateTimer;
@@ -35,6 +36,8 @@ namespace VirtualDesktopDisplayer
 
         // State
         private bool _isRenameMode = false;
+        private DesktopTrackingUpdate _lastTrackingUpdate = DesktopTrackingUpdate.Unknown;
+        private DateTime _lastTrackingUpdateAt = DateTime.MinValue;
 
         public VirtualDesktopDisplayForm(
             IWindowsDesktopNameService? desktopNameService = null,
@@ -48,6 +51,7 @@ namespace VirtualDesktopDisplayer
             _screenStateDetector = screenStateDetector ?? VirtualDesktopServiceProvider.GetScreenStateDetector();
             _config = config ?? TrackerConfiguration.Instance;
             _trackingCoordinator = new DesktopTrackingCoordinator(_desktopNameService, _screenStateDetector, _usageTracker);
+            _usageAnalysisService = new UsageAnalysisService(_usageTracker, _config);
 
             // Initialize services
             _windowPositionService = new WindowPositionService(_config);
@@ -166,6 +170,8 @@ namespace VirtualDesktopDisplayer
                     return;
 
                 DesktopTrackingUpdate trackingUpdate = _trackingCoordinator.Poll();
+                _lastTrackingUpdate = trackingUpdate;
+                _lastTrackingUpdateAt = DateTime.Now;
                 if (!string.IsNullOrEmpty(trackingUpdate.ErrorMessage))
                 {
                     throw new InvalidOperationException(trackingUpdate.ErrorMessage);
@@ -319,7 +325,8 @@ namespace VirtualDesktopDisplayer
             
             // Group extras options under a single 'Extras' menu
             var extrasMenu = new ToolStripMenuItem("Extras");
-            extrasMenu.DropDownItems.Add("Working Hours Estimation", null, OnWorkingHoursEstimationClick);
+            extrasMenu.DropDownItems.Add("Working Hours...", null, OnWorkingHoursEstimationClick);
+            extrasMenu.DropDownItems.Add("Tracking Status", null, OnShowTrackingStatusClick);
             extrasMenu.DropDownItems.Add(new ToolStripSeparator());
             extrasMenu.DropDownItems.Add("Open Current Issue", null, OnOpenCurrentIssueClick);
             extrasMenu.DropDownItems.Add("Create New Desktop", null, OnCreateNewDesktopClick);
@@ -904,45 +911,64 @@ namespace VirtualDesktopDisplayer
 
         private async void OnGenerateReportClick(object? sender, EventArgs e)
         {
+            using var optionsForm = new UsageReportOptionsForm();
+            if (optionsForm.ShowDialog(this) != DialogResult.OK)
+            {
+                return;
+            }
+
             try
             {
-                await _usageTracker.GenerateUsageReportAsync();
-                string reportPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
-                                                _config.ReportFileName);
-
-                if (File.Exists(reportPath))
+                Cursor = Cursors.WaitCursor;
+                var reportResult = await _usageAnalysisService.GenerateReportAsync(optionsForm.Options);
+                if (!reportResult.HasData)
                 {
-                    _applicationService.OpenFileInNotepad(reportPath);
+                    _applicationService.ShowInformation($"No usage data found for {optionsForm.Options.Date:yyyy-MM-dd}.");
+                    return;
                 }
+
+                _applicationService.OpenFileInNotepad(reportResult.TextReportPath);
+                _applicationService.ShowInformation(
+                    $"Report created for {reportResult.Date:yyyy-MM-dd}.\n\n" +
+                    $"{reportResult.EntryCount} activities processed.\n" +
+                    $"Text report: {reportResult.TextReportPath}\n" +
+                    $"JSON report: {reportResult.JsonReportPath}",
+                    "Usage Report Generated");
             }
             catch (Exception ex)
             {
                 _applicationService.ShowError($"Error generating report: {ex.Message}");
             }
+            finally
+            {
+                Cursor = Cursors.Default;
+            }
         }
 
         private void OnWorkingHoursEstimationClick(object? sender, EventArgs e)
         {
-            try
-            {
-                var estimationService = new WorkingHoursEstimationService(_config);
-                var allEntries = _usageTracker.GetAllUsageHistory();
-                var estimation = estimationService.EstimateWorkingHours(allEntries);
+            using var estimationForm = new WorkingHoursEstimationForm(_usageAnalysisService);
+            estimationForm.ShowDialog(this);
+        }
 
-                string title = $"Working Hours Estimation - {estimation.Date:yyyy-MM-dd}";
-                string message = estimation.Message;
+        private void OnShowTrackingStatusClick(object? sender, EventArgs e)
+        {
+            string desktopName = string.IsNullOrWhiteSpace(_lastTrackingUpdate.DesktopName)
+                ? "Unknown"
+                : _lastTrackingUpdate.DesktopName;
+            string lastError = string.IsNullOrWhiteSpace(_lastTrackingUpdate.ErrorMessage)
+                ? "None"
+                : _lastTrackingUpdate.ErrorMessage;
 
-                if (estimation.EstimatedFinishTime.HasValue)
-                {
-                    message += $"\n\n🕐 Estimated finish time: {estimation.EstimatedFinishTime.Value:HH:mm}";
-                }
-
-                _applicationService.ShowInformation(message, title);
-            }
-            catch (Exception ex)
-            {
-                _applicationService.ShowError($"Error estimating working hours: {ex.Message}");
-            }
+            _applicationService.ShowInformation(
+                $"Tracking is active.\n\n" +
+                $"Current desktop: {desktopName}\n" +
+                $"Last update: {(_lastTrackingUpdateAt == DateTime.MinValue ? "Not yet available" : _lastTrackingUpdateAt.ToString("HH:mm:ss"))}\n" +
+                $"Active interval: {_config.ActiveScreenUpdateInterval.TotalSeconds:0.#} seconds\n" +
+                $"Screen-off interval: {_config.InactiveScreenUpdateInterval.TotalSeconds:0.#} seconds\n" +
+                $"Log folder: {_usageTracker.GetLogDirectory()}\n" +
+                $"Last error: {lastError}",
+                "Tracking Status");
         }
 
         private void OnTimelineViewClick(object? sender, EventArgs e)

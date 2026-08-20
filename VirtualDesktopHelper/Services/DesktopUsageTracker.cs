@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
-using System.Threading.Tasks;
 using VirtualDesktopHelper.Configuration;
 using VirtualDesktopHelper.Interfaces;
 using VirtualDesktopHelper.Models;
@@ -169,27 +168,6 @@ namespace VirtualDesktopHelper.Services
             return _logDirectory;
         }
 
-        public async Task GenerateUsageReportAsync()
-        {
-            try
-            {
-                var reportPath = Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
-                    _config.ReportFileName
-                );
-
-                var reportGenerator = new UsageReportGenerator(_config);
-                var allEntries = GetAllUsageHistory();
-                
-                // Generate both text and JSON reports
-                await reportGenerator.GenerateReportWithJsonAsync(allEntries, reportPath, currentDayOnly: true);
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Error generating usage report: {ex.Message}");
-            }
-        }
-
         private void EnsureLogDirectoryExists()
         {
             try
@@ -248,25 +226,6 @@ namespace VirtualDesktopHelper.Services
                     SaveCurrentSessionLog();
                 }
             }
-        }
-
-        /// <summary>
-        /// Ensures all entries have proper end times before returning usage history.
-        /// This method sets the end time to current time for any entries that are still active (EndTime = null).
-        /// </summary>
-        /// <returns>List of usage entries with all end times properly set.</returns>
-        public List<DesktopUsageEntry> GetAllUsageHistoryWithClosedSessions()
-        {
-            var allEntries = GetAllUsageHistory();
-            DateTime now = DateTime.Now;
-
-            // Ensure all entries have end times set
-            foreach (var entry in allEntries.Where(e => e.EndTime == null))
-            {
-                entry.EndTime = now;
-            }
-
-            return allEntries.OrderBy(e => e.StartTime).ToList();
         }
 
         /// <summary>
