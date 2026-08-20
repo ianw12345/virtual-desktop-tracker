@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using VirtualDesktopDisplayer.Services;
@@ -28,6 +29,8 @@ namespace VirtualDesktopDisplayer
         private readonly TrackerConfiguration _config;
         private readonly DesktopTrackingCoordinator _trackingCoordinator;
         private readonly UsageAnalysisService _usageAnalysisService;
+        private readonly DesktopNavigationService _desktopNavigationService;
+        private readonly GlobalMouseNavigationService _globalMouseNavigationService;
 
         // UI Components
         private System.Windows.Forms.Timer? updateTimer;
@@ -38,6 +41,7 @@ namespace VirtualDesktopDisplayer
         private bool _isRenameMode = false;
         private DesktopTrackingUpdate _lastTrackingUpdate = DesktopTrackingUpdate.Unknown;
         private DateTime _lastTrackingUpdateAt = DateTime.MinValue;
+        private int _mouseNavigationInProgress;
 
         public VirtualDesktopDisplayForm(
             IWindowsDesktopNameService? desktopNameService = null,
@@ -52,6 +56,9 @@ namespace VirtualDesktopDisplayer
             _config = config ?? TrackerConfiguration.Instance;
             _trackingCoordinator = new DesktopTrackingCoordinator(_desktopNameService, _screenStateDetector, _usageTracker);
             _usageAnalysisService = new UsageAnalysisService(_usageTracker, _config);
+            _desktopNavigationService = new DesktopNavigationService(_desktopNameService);
+            _globalMouseNavigationService = new GlobalMouseNavigationService();
+            _globalMouseNavigationService.NavigationRequested += OnMouseDesktopNavigationRequested;
 
             // Initialize services
             _windowPositionService = new WindowPositionService(_config);
@@ -240,12 +247,14 @@ namespace VirtualDesktopDisplayer
             base.OnLoad(e);
             _windowPositionService.PositionWindowBottomRight(this);
             _virtualDesktopService.ConfigureWindowForAllDesktops(this.Handle);
+            ApplyMouseDesktopNavigation(_config.EnableMouseDesktopNavigation, showError: false);
         }
 
         protected override void OnFormClosing(FormClosingEventArgs e)
         {
             updateTimer?.Stop();
             updateTimer?.Dispose();
+            _globalMouseNavigationService.Dispose();
             _trackingCoordinator.Stop();
             base.OnFormClosing(e);
         }
@@ -345,6 +354,13 @@ namespace VirtualDesktopDisplayer
             configureMenu.DropDownItems.Add("Timely", null, OnConfigureTimelyClick);
             configureMenu.DropDownItems.Add("Projects", null, OnConfigureProjectsClick);
             configureMenu.DropDownItems.Add("Issue Tracking", null, OnConfigureIssueTrackingClick);
+            var mouseNavigationItem = new ToolStripMenuItem("Use mouse Back/Forward buttons to switch desktops")
+            {
+                Checked = _config.EnableMouseDesktopNavigation,
+                CheckOnClick = true
+            };
+            mouseNavigationItem.Click += OnMouseDesktopNavigationSettingClick;
+            configureMenu.DropDownItems.Add(mouseNavigationItem);
             contextMenu.Items.Add(configureMenu);
             
             contextMenu.Items.Add("Upload to Timely", null, OnUploadToTimelyClick);
@@ -969,6 +985,84 @@ namespace VirtualDesktopDisplayer
                 $"Log folder: {_usageTracker.GetLogDirectory()}\n" +
                 $"Last error: {lastError}",
                 "Tracking Status");
+        }
+
+        private void OnMouseDesktopNavigationSettingClick(object? sender, EventArgs e)
+        {
+            if (sender is not ToolStripMenuItem menuItem)
+            {
+                return;
+            }
+
+            ApplyMouseDesktopNavigation(menuItem.Checked, showError: true);
+        }
+
+        private void ApplyMouseDesktopNavigation(bool enabled, bool showError)
+        {
+            try
+            {
+                if (enabled)
+                {
+                    _globalMouseNavigationService.Start();
+                }
+                else
+                {
+                    _globalMouseNavigationService.Stop();
+                }
+
+                _config.EnableMouseDesktopNavigation = enabled;
+                _config.SaveConfiguration();
+            }
+            catch (Exception ex)
+            {
+                _globalMouseNavigationService.Stop();
+                _config.EnableMouseDesktopNavigation = false;
+                _config.SaveConfiguration();
+
+                if (showError)
+                {
+                    _applicationService.ShowError($"Mouse-button desktop navigation could not be enabled: {ex.Message}");
+                }
+            }
+        }
+
+        private void OnMouseDesktopNavigationRequested(DesktopNavigationDirection direction)
+        {
+            if (Interlocked.Exchange(ref _mouseNavigationInProgress, 1) != 0)
+            {
+                return;
+            }
+
+            _ = NavigateWithMouseAsync(direction);
+        }
+
+        private async Task NavigateWithMouseAsync(DesktopNavigationDirection direction)
+        {
+            try
+            {
+                DesktopNavigationResult result = await Task.Run(() => _desktopNavigationService.Navigate(direction));
+                if (IsDisposed || !result.WasSwitched)
+                {
+                    return;
+                }
+
+                BeginInvoke((Action)(() =>
+                {
+                    UpdateDesktopName();
+                    _applicationService.ShowToast(this, $"Switched to {result.TargetDesktopName}");
+                }));
+            }
+            catch (Exception ex)
+            {
+                if (!IsDisposed && IsHandleCreated)
+                {
+                    BeginInvoke((Action)(() => _applicationService.ShowToast(this, $"Desktop switch failed: {ex.Message}")));
+                }
+            }
+            finally
+            {
+                Interlocked.Exchange(ref _mouseNavigationInProgress, 0);
+            }
         }
 
         private void OnTimelineViewClick(object? sender, EventArgs e)

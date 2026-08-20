@@ -11,6 +11,7 @@ Virtual Desktop Tracker is a single Windows desktop application for showing the 
 - Date-selectable text and JSON reports with configurable activity consolidation
 - Timeline, project detection, issue tracking, and Timely upload integration
 - Tracking status and direct access to the current log file/folder
+- Optional global Back/Forward mouse buttons for previous/next desktop navigation
 
 ## Project layout
 
@@ -30,7 +31,7 @@ virtual-desktop-tracker/
 - .NET SDK 9.0 or later
 - The helper executables from [MScholtes/VirtualDesktop](https://github.com/MScholtes/VirtualDesktop)
 
-The display is pinned to all virtual desktops with `VirtualDesktop11-24H2.exe` (preferred) or `VirtualDesktop11.exe`. Place a compiled helper executable beside `VirtualDesktopDisplayer.exe` before launching a release build.
+The display is pinned to all virtual desktops with `VirtualDesktop11-24H2.exe` (preferred) or `VirtualDesktop11.exe`. When the helpers are present in the repository's `VirtualDesktop` directory, the build copies them beside `VirtualDesktopDisplayer.exe` automatically.
 
 ### Build the VirtualDesktop helper
 
@@ -40,7 +41,6 @@ From the repository root:
 git clone https://github.com/MScholtes/VirtualDesktop.git VirtualDesktop
 & 'C:\Windows\Microsoft.NET\Framework\v4.0.30319\csc.exe' .\VirtualDesktop\VirtualDesktop11.cs /out:.\VirtualDesktop\VirtualDesktop11.exe /win32icon:.\VirtualDesktop\VirtualDesktop.ico
 & 'C:\Windows\Microsoft.NET\Framework\v4.0.30319\csc.exe' .\VirtualDesktop\VirtualDesktop11-24H2.cs /out:.\VirtualDesktop\VirtualDesktop11-24H2.exe /win32icon:.\VirtualDesktop\VirtualDesktop.ico
-Copy-Item .\VirtualDesktop\VirtualDesktop11-24H2.exe .\VirtualDesktopDisplayer\bin\Release\net9.0-windows\
 ```
 
 Use `VirtualDesktop11.exe` instead on Windows versions for which the 24H2 helper is not compatible. GitHub Actions builds both helpers automatically to verify the solution.
@@ -53,7 +53,7 @@ dotnet build .\virtual-desktop-tracker.sln --configuration Release
 .\VirtualDesktopDisplayer\bin\Release\net9.0-windows\VirtualDesktopDisplayer.exe
 ```
 
-For development, run `.\run-displayer.bat`. For a built release, use `.\Run-VirtualDesktopDisplayer.bat` after the helper executable has been copied beside the application.
+For development, run `.\run-displayer.bat`. For a built release, use `.\Run-VirtualDesktopDisplayer.bat`.
 
 ## Using the app
 
@@ -65,7 +65,9 @@ For development, run `.\run-displayer.bat`. For a built release, use `.\Run-Virt
    - **Generate Report** creates text and JSON reports for a selected date. Its dialog exposes the former CLI options: activity consolidation, minimum duration, and maximum custom duration.
    - **Tracking Status** shows the current desktop, most recent poll, intervals, log location, and last tracking error.
    - **View Log JSON** and **Open Log Folder** provide direct access to persisted data.
-5. Use **Configure** to set up Timely, project mappings, and issue tracking.
+5. Use **Configure** to set up Timely, project mappings, issue tracking, and mouse navigation.
+   - Enable **Use mouse Back/Forward buttons to switch desktops** to map the dedicated Back button to the previous desktop and the Forward button to the next desktop.
+   - While enabled, the app consumes these two button presses globally; browsers and other applications will not also receive their normal Back/Forward action.
 
 ## Data and configuration
 
@@ -97,6 +99,10 @@ Ensure `VirtualDesktop11-24H2.exe` or `VirtualDesktop11.exe` is beside the appli
 ### The display shows an error or no desktop name
 
 Verify that the helper executable matches your Windows version and can be run from the application directory. Then open **Extras → Tracking Status** for the last recorded error.
+
+### The Back/Forward mouse buttons do not switch desktops
+
+Open the right-click menu and enable **Configure → Use mouse Back/Forward buttons to switch desktops**. The option is intentionally off by default. It only works while VirtualDesktopDisplayer is running and there must be an adjacent desktop in the chosen direction.
 
 ### No report data is found
 

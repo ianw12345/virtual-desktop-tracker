@@ -1,43 +1,24 @@
-# Virtual Desktop Displayer
+# VirtualDesktopDisplayer
 
-A Windows Forms application that displays the current virtual desktop name in the bottom right corner of the screen, above the taskbar.
+`VirtualDesktopDisplayer.exe` is the single graphical application in this repository. It displays the active Windows virtual desktop, records usage, and provides all analysis and configuration functions from its right-click menu.
 
-## Features
+## Main controls
 
-- **Real-time Updates**: Updates the desktop name every second
-- **Unobtrusive Display**: Shows as a semi-transparent overlay in the bottom right corner
-- **Easy Exit**: Double-click or right-click → Exit to close the application
-- **Always On Top**: Stays visible above other windows
-- **No Taskbar Icon**: Doesn't clutter the taskbar
+- **Right-click the display** to rename desktops, open reports and logs, view the timeline, configure integrations, or exit.
+- **Double-click the display** to exit.
+- **Configure → Use mouse Back/Forward buttons to switch desktops** optionally maps the dedicated mouse Back button to the previous desktop and the Forward button to the next desktop.
 
-## How It Works
+The mouse option is disabled by default and is stored in the tracker configuration. When enabled, it consumes those buttons globally while the app is running, so foreground programs do not also navigate back or forward.
 
-The application uses the `VirtualDesktopHelper` library to call the VirtualDesktop executable via subprocess to get the current desktop name. It displays this information in a borderless, semi-transparent window positioned in the bottom right corner of the screen.
+## Build and run
 
-## Usage
+From the repository root:
 
-1. Build and run the application:
-   ```
-   dotnet run
-   ```
+```powershell
+dotnet build .\virtual-desktop-tracker.sln --configuration Release
+.\VirtualDesktopDisplayer\bin\Release\net9.0-windows\VirtualDesktopDisplayer.exe
+```
 
-2. The desktop name will appear in the bottom right corner of your screen
+The application uses `VirtualDesktop11-24H2.exe` or `VirtualDesktop11.exe` to retrieve, pin, rename, and switch virtual desktops. The `VirtualDesktopHelper` project copies the helpers from the repository's `VirtualDesktop` directory into the application output during the build.
 
-3. To exit the application:
-   - Double-click on the display
-   - Right-click and select "Exit"
-
-## Requirements
-
-- Windows 10/11 with Virtual Desktop support
-- .NET 9.0 or later
-- The VirtualDesktop executable must be present in the `../VirtualDesktop/` directory
-
-## Dependencies
-
-- `VirtualDesktopHelper` - A helper library for retrieving desktop names
-- Windows Forms
-
-## Configuration
-
-The display automatically positions itself in the bottom right corner with a 10-pixel margin from the edges. The text is displayed with a semi-transparent black background and white text for good visibility.
+For full setup, usage, reports, integrations, and troubleshooting, see the [root README](../README.md).

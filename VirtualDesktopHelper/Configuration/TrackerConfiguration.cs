@@ -22,6 +22,12 @@ namespace VirtualDesktopHelper.Configuration
         public TimeSpan InactiveScreenUpdateInterval { get; set; } = TimeSpan.FromSeconds(10);
 
         /// <summary>
+        /// Whether the global Back and Forward mouse buttons switch to the previous and next virtual desktop.
+        /// When enabled, those button presses are consumed by this application while it is running.
+        /// </summary>
+        public bool EnableMouseDesktopNavigation { get; set; } = false;
+
+        /// <summary>
         /// How long user must be idle before considering screen "off".
         /// </summary>
         public TimeSpan ScreenOffIdleThreshold { get; set; } = TimeSpan.FromMinutes(10);
