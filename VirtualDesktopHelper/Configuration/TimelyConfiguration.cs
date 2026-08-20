@@ -22,17 +22,17 @@ namespace VirtualDesktopHelper.Configuration
         /// <summary>
         /// Timely workspace ID (from URL)
         /// </summary>
-        public string WorkspaceId { get; set; } = "946869";
+        public string WorkspaceId { get; set; } = "";
 
         /// <summary>
         /// Default Timely project ID for time entries (used when no specific project is detected)
         /// </summary>
-        public long DefaultProjectId { get; set; } = 3572980;
+        public long DefaultProjectId { get; set; }
 
         /// <summary>
         /// Timely user ID
         /// </summary>
-        public long UserId { get; set; } = 2190564;
+        public long UserId { get; set; }
 
         /// <summary>
         /// CSRF token for API requests (needs to be updated periodically)
@@ -42,7 +42,7 @@ namespace VirtualDesktopHelper.Configuration
         /// <summary>
         /// Socket ID for API requests
         /// </summary>
-        public string SocketId { get; set; } = "231680.3423";
+        public string SocketId { get; set; } = "";
 
         /// <summary>
         /// Cookie string for authentication (needs to be updated periodically)
@@ -100,8 +100,8 @@ namespace VirtualDesktopHelper.Configuration
                 if (File.Exists(configPath))
                 {
                     string json = File.ReadAllText(configPath);
-                    var config = JsonSerializer.Deserialize<TimelyConfiguration>(json);
-                    return config ?? new TimelyConfiguration();
+                    var persistedConfig = JsonSerializer.Deserialize<PersistedTimelyConfiguration>(json);
+                    return persistedConfig?.ToConfiguration() ?? new TimelyConfiguration();
                 }
             }
             catch (Exception ex)
@@ -127,12 +127,10 @@ namespace VirtualDesktopHelper.Configuration
                     Directory.CreateDirectory(directory);
                 }
 
-                var options = new JsonSerializerOptions
+                string json = JsonSerializer.Serialize(ToPersistedConfiguration(), new JsonSerializerOptions
                 {
                     WriteIndented = true
-                };
-
-                string json = JsonSerializer.Serialize(this, options);
+                });
                 File.WriteAllText(configPath, json);
             }
             catch (Exception ex)
@@ -161,6 +159,42 @@ namespace VirtualDesktopHelper.Configuration
             {
                 _instance = null;
             }
+        }
+
+        private PersistedTimelyConfiguration ToPersistedConfiguration() => new()
+        {
+            ApiBaseUrl = ApiBaseUrl,
+            WorkspaceId = WorkspaceId,
+            DefaultProjectId = DefaultProjectId,
+            UserId = UserId,
+            CsrfToken = DpapiSecretProtector.Protect(CsrfToken),
+            SocketId = DpapiSecretProtector.Protect(SocketId),
+            CookieString = DpapiSecretProtector.Protect(CookieString),
+            TimezoneOffset = TimezoneOffset
+        };
+
+        private sealed class PersistedTimelyConfiguration
+        {
+            public string ApiBaseUrl { get; set; } = "https://app.timelyapp.com";
+            public string WorkspaceId { get; set; } = "";
+            public long DefaultProjectId { get; set; }
+            public long UserId { get; set; }
+            public string CsrfToken { get; set; } = "";
+            public string SocketId { get; set; } = "";
+            public string CookieString { get; set; } = "";
+            public string TimezoneOffset { get; set; } = "+02:00";
+
+            public TimelyConfiguration ToConfiguration() => new()
+            {
+                ApiBaseUrl = ApiBaseUrl,
+                WorkspaceId = WorkspaceId,
+                DefaultProjectId = DefaultProjectId,
+                UserId = UserId,
+                CsrfToken = DpapiSecretProtector.Unprotect(CsrfToken),
+                SocketId = DpapiSecretProtector.Unprotect(SocketId),
+                CookieString = DpapiSecretProtector.Unprotect(CookieString),
+                TimezoneOffset = TimezoneOffset
+            };
         }
     }
 }

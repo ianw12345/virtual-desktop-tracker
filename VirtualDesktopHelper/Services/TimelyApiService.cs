@@ -25,47 +25,10 @@ namespace VirtualDesktopHelper.Services
 
         public TimelyApiService(IUsageConsolidationService? consolidationService = null)
         {
-            _httpClient = new HttpClient();
             _timelyConfig = TimelyConfiguration.Instance;
+            _httpClient = TimelyHttpClientFactory.Create(_timelyConfig, includeUploadHeaders: true);
             _consolidationService = consolidationService ?? new UsageConsolidationService();
             _projectDetectionService = new ProjectDetectionService();
-            
-            ConfigureHttpClient();
-        }
-
-        private void ConfigureHttpClient()
-        {
-            // Set base headers exactly as shown in the example
-            _httpClient.DefaultRequestHeaders.Clear();
-            _httpClient.DefaultRequestHeaders.Add("accept", "application/json");
-            _httpClient.DefaultRequestHeaders.Add("accept-language", "en-US,en;q=0.9,nl;q=0.8");
-            _httpClient.DefaultRequestHeaders.Add("cache-control", "no-cache");
-            _httpClient.DefaultRequestHeaders.Add("origin", _timelyConfig.ApiBaseUrl);
-            _httpClient.DefaultRequestHeaders.Add("pragma", "no-cache");
-            _httpClient.DefaultRequestHeaders.Add("priority", "u=1, i");
-            _httpClient.DefaultRequestHeaders.Add("sec-ch-ua", "\"Not;A=Brand\";v=\"99\", \"Microsoft Edge\";v=\"139\", \"Chromium\";v=\"139\"");
-            _httpClient.DefaultRequestHeaders.Add("sec-ch-ua-mobile", "?0");
-            _httpClient.DefaultRequestHeaders.Add("sec-ch-ua-platform", "\"Windows\"");
-            _httpClient.DefaultRequestHeaders.Add("sec-fetch-dest", "empty");
-            _httpClient.DefaultRequestHeaders.Add("sec-fetch-mode", "same-origin");
-            _httpClient.DefaultRequestHeaders.Add("sec-fetch-site", "same-origin");
-            _httpClient.DefaultRequestHeaders.Add("user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36 Edg/139.0.0.0");
-            
-            // Add authentication headers
-            if (!string.IsNullOrEmpty(_timelyConfig.CsrfToken))
-            {
-                _httpClient.DefaultRequestHeaders.Add("x-csrf-token", _timelyConfig.CsrfToken);
-            }
-            
-            if (!string.IsNullOrEmpty(_timelyConfig.SocketId))
-            {
-                _httpClient.DefaultRequestHeaders.Add("tl-socket-id", _timelyConfig.SocketId);
-            }
-            
-            if (!string.IsNullOrEmpty(_timelyConfig.CookieString))
-            {
-                _httpClient.DefaultRequestHeaders.Add("Cookie", _timelyConfig.CookieString);
-            }
         }
 
         /// <summary>

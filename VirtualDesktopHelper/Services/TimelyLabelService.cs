@@ -20,25 +20,8 @@ namespace VirtualDesktopHelper.Services
 
         public TimelyLabelService()
         {
-            _httpClient = new HttpClient();
             _timelyConfig = TimelyConfiguration.Instance;
-            ConfigureHttpClient();
-        }
-
-        private void ConfigureHttpClient()
-        {
-            // Set base headers for Timely API
-            _httpClient.DefaultRequestHeaders.Clear();
-            _httpClient.DefaultRequestHeaders.Add("accept", "application/json");
-            _httpClient.DefaultRequestHeaders.Add("accept-language", "en-US,en;q=0.9,nl;q=0.8");
-            _httpClient.DefaultRequestHeaders.Add("cache-control", "no-cache");
-            _httpClient.DefaultRequestHeaders.Add("user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36 Edg/139.0.0.0");
-            
-            // Add authentication headers if available
-            if (!string.IsNullOrEmpty(_timelyConfig.CookieString))
-            {
-                _httpClient.DefaultRequestHeaders.Add("Cookie", _timelyConfig.CookieString);
-            }
+            _httpClient = TimelyHttpClientFactory.Create(_timelyConfig);
         }
 
         /// <summary>
@@ -81,13 +64,7 @@ namespace VirtualDesktopHelper.Services
                     throw new InvalidOperationException("Received empty response from Timely API.");
                 }
 
-                var options = new JsonSerializerOptions
-                {
-                    PropertyNameCaseInsensitive = true,
-                    PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower
-                };
-
-                var labels = JsonSerializer.Deserialize<List<TimelyLabel>>(jsonContent, options);
+                var labels = JsonSerializer.Deserialize<List<TimelyLabel>>(jsonContent, TimelyHttpClientFactory.JsonOptions);
                 
                 if (labels == null)
                 {
@@ -154,13 +131,7 @@ namespace VirtualDesktopHelper.Services
                     throw new InvalidOperationException("Received empty response from Timely API.");
                 }
 
-                var options = new JsonSerializerOptions
-                {
-                    PropertyNameCaseInsensitive = true,
-                    PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower
-                };
-
-                var projectDetails = JsonSerializer.Deserialize<TimelyProjectDetails>(jsonContent, options);
+                var projectDetails = JsonSerializer.Deserialize<TimelyProjectDetails>(jsonContent, TimelyHttpClientFactory.JsonOptions);
                 
                 if (projectDetails == null)
                 {
