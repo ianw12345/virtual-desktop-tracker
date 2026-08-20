@@ -9,7 +9,7 @@ Virtual Desktop Tracker is a single Windows desktop application for showing the 
 - Rename, create, and jump to virtual desktops from the right-click menu
 - Date-selectable working-hours estimation
 - Date-selectable text and JSON reports with configurable activity consolidation
-- Timeline, project detection, issue tracking, and Timely upload integration
+- Timeline, project detection, issue tracking, and Timely or Clockify upload integration
 - Tracking status and direct access to the current log file/folder
 - Optional global Back/Forward mouse buttons for previous/next desktop navigation
 
@@ -64,7 +64,7 @@ The `publish` directory contains exactly one self-contained executable. For deve
    - **Generate Report** creates text and JSON reports for a selected date. Its dialog exposes the former CLI options: activity consolidation, minimum duration, and maximum custom duration.
    - **Tracking Status** shows the current desktop, most recent poll, intervals, log location, and last tracking error.
    - **View Log JSON** and **Open Log Folder** provide direct access to persisted data.
-5. Use **Configure** to set up Timely, project mappings, issue tracking, and mouse navigation.
+5. Use **Configure** to set up Timely, Clockify, project mappings, issue tracking, and mouse navigation.
    - Enable **Use mouse Back/Forward buttons to switch desktops** to map the dedicated Back button to the previous desktop and the Forward button to the next desktop. The order is cyclic: `1 → 2 → 3 → 1` and `1 → 3` when navigating back.
    - While enabled, the app consumes these two button presses globally; browsers and other applications will not also receive their normal Back/Forward action.
 
@@ -72,14 +72,16 @@ The `publish` directory contains exactly one self-contained executable. For deve
 
 - Usage logs and date-specific reports are stored in `%USERPROFILE%\Documents\VirtualDesktopLogs` by default.
 - Tracker configuration is saved as `tracker_config.json` in the same folder.
-- Timely configuration is saved separately in that folder. Sensitive Timely values are encrypted for the current Windows user when the configuration is next saved.
+- Timely and Clockify configuration are saved separately in that folder. Sensitive values, including the Clockify API key, are encrypted for the current Windows user when the configuration is saved.
 
 The report dialog creates `usage_report_YYYY-MM-DD.txt` and `usage_report_YYYY-MM-DD.json`. Existing files for the same date are replaced when a report is generated again.
 
-## Issue tracking and Timely
+## Issue tracking and time tracking
 
 - [Issue tracking setup](ISSUE_TRACKING.md) explains regex patterns and issue URL templates.
-- Timely is configured from the app with **Configure → Timely**. You can upload tracked entries through the menu once configuration is complete.
+- Timely is configured from the app with **Configure → Timely**. It retains the existing cookie-based integration.
+- Clockify is configured from the app with **Configure → Clockify**. Enter an API key, choose the workspace and default project, then use **Upload to Clockify**. The app creates one regular Clockify time entry per consolidated desktop interval; the entry description is `Virtual desktop: <desktop name>`.
+- Clockify uses its public v1 API and an `X-Api-Key` header. The key is not written to the usage log or error messages. See the [Clockify API documentation](https://docs.clockify.me/).
 
 ## Test and CI
 
@@ -105,7 +107,7 @@ The application requires Windows 11 24H2, build 26100 or later. This is checked 
 
 ### The Back/Forward mouse buttons do not switch desktops
 
-Open the right-click menu and enable **Configure → Use mouse Back/Forward buttons to switch desktops**. The option is intentionally off by default. It only works while VirtualDesktopDisplayer is running and there must be an adjacent desktop in the chosen direction.
+Open the right-click menu and enable **Configure → Use mouse Back/Forward buttons to switch desktops**. The option is intentionally off by default and works only while VirtualDesktopDisplayer is running. Navigation wraps around the available desktops.
 
 ### No report data is found
 

@@ -10,6 +10,7 @@ using VirtualDesktopDisplayer.Services;
 using VirtualDesktopHelper;
 using VirtualDesktopHelper.Configuration;
 using VirtualDesktopHelper.Interfaces;
+using VirtualDesktopHelper.Models;
 using VirtualDesktopHelper.Services;
 
 namespace VirtualDesktopDisplayer
@@ -347,11 +348,13 @@ namespace VirtualDesktopDisplayer
             extrasMenu.DropDownItems.Add("Generate Report", null, OnGenerateReportClick);
             extrasMenu.DropDownItems.Add("Copy Timely JavaScript", null, OnCopyJavaScriptClick);
             extrasMenu.DropDownItems.Add("Upload to Timely (from time...)", null, OnUploadToTimelyFromTimeClick);
+            extrasMenu.DropDownItems.Add("Upload to Clockify (from time...)", null, OnUploadToClockifyFromTimeClick);
             contextMenu.Items.Add(extrasMenu);
             
             // Group configure options under a single 'Configure' menu
             var configureMenu = new ToolStripMenuItem("Configure");
             configureMenu.DropDownItems.Add("Timely", null, OnConfigureTimelyClick);
+            configureMenu.DropDownItems.Add("Clockify", null, OnConfigureClockifyClick);
             configureMenu.DropDownItems.Add("Projects", null, OnConfigureProjectsClick);
             configureMenu.DropDownItems.Add("Issue Tracking", null, OnConfigureIssueTrackingClick);
             var mouseNavigationItem = new ToolStripMenuItem("Use mouse Back/Forward buttons to switch desktops")
@@ -364,6 +367,7 @@ namespace VirtualDesktopDisplayer
             contextMenu.Items.Add(configureMenu);
             
             contextMenu.Items.Add("Upload to Timely", null, OnUploadToTimelyClick);
+            contextMenu.Items.Add("Upload to Clockify", null, OnUploadToClockifyClick);
             contextMenu.Items.Add("Timeline View", null, OnTimelineViewClick);
             contextMenu.Items.Add(new ToolStripSeparator());
             contextMenu.Items.Add("Exit", null, (s, args) => _applicationService.ExitApplication());
@@ -1405,6 +1409,103 @@ namespace VirtualDesktopDisplayer
             }
         }
 
+        private async void OnUploadToClockifyClick(object? sender, EventArgs e)
+        {
+            await UploadToClockifyAsync(null);
+        }
+
+        private async void OnUploadToClockifyFromTimeClick(object? sender, EventArgs e)
+        {
+            using var timeSelectionForm = new TimelyTimeSelectionForm();
+            if (timeSelectionForm.ShowDialog() == DialogResult.OK)
+            {
+                await UploadToClockifyAsync(timeSelectionForm.SelectedTime);
+            }
+        }
+
+        private async Task UploadToClockifyAsync(DateTime? fromTime)
+        {
+            try
+            {
+                if (!ClockifyConfiguration.Instance.IsConfigured())
+                {
+                    var setup = MessageBox.Show(
+                        "Clockify is not configured. An API key, workspace and default project are required. Configure it now?",
+                        "Clockify configuration required",
+                        MessageBoxButtons.YesNo,
+                        MessageBoxIcon.Question);
+                    if (setup == DialogResult.Yes)
+                    {
+                        ShowClockifyConfigurationDialog();
+                    }
+
+                    return;
+                }
+
+                List<DesktopUsageEntry> allEntries = _usageTracker.GetAllUsageHistory();
+                if (!allEntries.Any())
+                {
+                    _applicationService.ShowInformation("No usage data is available to upload to Clockify.");
+                    return;
+                }
+
+                string period = fromTime.HasValue ? $"from {fromTime.Value:HH:mm}" : "for today";
+                var confirmation = MessageBox.Show(
+                    $"This creates Clockify time entries {period}. Continue?",
+                    "Confirm Clockify upload",
+                    MessageBoxButtons.YesNo,
+                    MessageBoxIcon.Question);
+                if (confirmation != DialogResult.Yes)
+                {
+                    return;
+                }
+
+                using var progressForm = new Form
+                {
+                    Text = "Uploading to Clockify",
+                    Size = new Size(310, 100),
+                    StartPosition = FormStartPosition.CenterParent,
+                    FormBorderStyle = FormBorderStyle.FixedDialog,
+                    MaximizeBox = false,
+                    MinimizeBox = false
+                };
+                progressForm.Controls.Add(new Label
+                {
+                    Text = "Uploading time entries to Clockify…",
+                    Dock = DockStyle.Fill,
+                    TextAlign = ContentAlignment.MiddleCenter
+                });
+                progressForm.Show(this);
+                Application.DoEvents();
+
+                ClockifyUploadResult uploadResult;
+                try
+                {
+                    using var service = new ClockifyApiService();
+                    uploadResult = await service.UploadAsync(allEntries, currentDayOnly: true, fromTime: fromTime);
+                }
+                finally
+                {
+                    progressForm.Close();
+                }
+
+                if (uploadResult.Success)
+                {
+                    ShowToastNotification($"Uploaded {uploadResult.SuccessCount} entries to Clockify.");
+                    return;
+                }
+
+                string errors = uploadResult.Errors.Any()
+                    ? "\n\nErrors:\n" + string.Join("\n", uploadResult.Errors.Take(10))
+                    : string.Empty;
+                _applicationService.ShowError($"No Clockify entries were uploaded ({uploadResult.FailureCount} failed).{errors}");
+            }
+            catch (Exception ex)
+            {
+                _applicationService.ShowError($"Error uploading to Clockify: {ex.Message}");
+            }
+        }
+
         private void ShowTimelyConfigurationDialog()
         {
             var configForm = new TimelyConfigurationFormEnhanced();
@@ -1423,6 +1524,27 @@ namespace VirtualDesktopDisplayer
             catch (Exception ex)
             {
                 _applicationService.ShowError($"Error opening Timely configuration: {ex.Message}");
+            }
+        }
+
+        private void OnConfigureClockifyClick(object? sender, EventArgs e)
+        {
+            try
+            {
+                ShowClockifyConfigurationDialog();
+            }
+            catch (Exception ex)
+            {
+                _applicationService.ShowError($"Error opening Clockify configuration: {ex.Message}");
+            }
+        }
+
+        private void ShowClockifyConfigurationDialog()
+        {
+            using var configurationForm = new ClockifyConfigurationForm();
+            if (configurationForm.ShowDialog(this) == DialogResult.OK)
+            {
+                ShowToastNotification("Clockify configuration saved.");
             }
         }
 
