@@ -20,6 +20,9 @@ namespace VirtualDesktopDisplayer
     /// </summary>
     public partial class VirtualDesktopDisplayForm : Form
     {
+        private static readonly Color IdleBackgroundColor = Color.DarkBlue;
+        private static readonly Color TrackingActiveBackgroundColor = Color.DarkGreen;
+
         // Services
         private readonly IWindowsDesktopNameService _desktopNameService;
         private readonly IDesktopUsageTracker _usageTracker;
@@ -103,7 +106,7 @@ namespace VirtualDesktopDisplayer
             this.FormBorderStyle = FormBorderStyle.None;
             this.ShowInTaskbar = false;
             this.TopMost = true;
-            this.BackColor = Color.DarkBlue;
+            this.BackColor = IdleBackgroundColor;
             this.WindowState = FormWindowState.Normal;
             this.StartPosition = FormStartPosition.Manual;
             this.Text = "Virtual Desktop Displayer";
@@ -116,7 +119,7 @@ namespace VirtualDesktopDisplayer
             {
                 AutoSize = true,
                 ForeColor = Color.White,
-                BackColor = Color.DarkBlue,
+                BackColor = IdleBackgroundColor,
                 Font = new Font("Segoe UI", 9F, FontStyle.Bold),
                 TextAlign = ContentAlignment.MiddleCenter,
                 Padding = new Padding(8, 4, 8, 4),
@@ -209,6 +212,7 @@ namespace VirtualDesktopDisplayer
                     UpdateDisplayWithUnknownDesktop();
                 }
 
+                ApplyTrackingVisualState();
                 ResizeAndRepositionWindow();
             }
             catch (Exception ex)
@@ -230,6 +234,16 @@ namespace VirtualDesktopDisplayer
             if (desktopLabel != null)
                 desktopLabel.Text = "Desktop: Unknown";
             this.Text = "Virtual Desktop Displayer - Unknown";
+        }
+
+        private void ApplyTrackingVisualState()
+        {
+            Color background = IsManualClockifySessionActive ? TrackingActiveBackgroundColor : IdleBackgroundColor;
+            BackColor = background;
+            if (desktopLabel is not null)
+            {
+                desktopLabel.BackColor = background;
+            }
         }
 
         private void UpdateTimerInterval(string currentDesktop)
@@ -344,6 +358,10 @@ namespace VirtualDesktopDisplayer
             contextMenu.Items.Add(jumpToDesktopItem);
             
             contextMenu.Items.Add(new ToolStripSeparator());
+
+            contextMenu.Items.Add(IsManualClockifySessionActive ? "Stop tracking & upload to Clockify" : "Start tracking", null,
+                IsManualClockifySessionActive ? OnClockifyCheckOutClick : OnClockifyCheckInClick);
+            contextMenu.Items.Add(new ToolStripSeparator());
             
             // Group extras options under a single 'Extras' menu
             var extrasMenu = new ToolStripMenuItem("Extras");
@@ -361,9 +379,6 @@ namespace VirtualDesktopDisplayer
             extrasMenu.DropDownItems.Add("Copy Timely JavaScript", null, OnCopyJavaScriptClick);
             extrasMenu.DropDownItems.Add("Upload to Timely (from time...)", null, OnUploadToTimelyFromTimeClick);
             extrasMenu.DropDownItems.Add("Upload to Clockify (from time...)", null, OnUploadToClockifyFromTimeClick);
-            extrasMenu.DropDownItems.Add(new ToolStripSeparator());
-            extrasMenu.DropDownItems.Add(IsManualClockifySessionActive ? "Stop tracking & upload to Clockify" : "Start tracking", null,
-                IsManualClockifySessionActive ? OnClockifyCheckOutClick : OnClockifyCheckInClick);
             contextMenu.Items.Add(extrasMenu);
             
             // Group configure options under a single 'Configure' menu
@@ -1053,6 +1068,7 @@ namespace VirtualDesktopDisplayer
                 _trackingCoordinator.Stop();
                 _config.ClockifyCheckInStartedAt = null;
                 _config.SaveConfiguration();
+                ApplyTrackingVisualState();
 
                 List<DesktopUsageEntry> entries = _usageTracker.GetAllUsageHistory();
                 using var service = new ClockifyApiService();

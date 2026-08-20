@@ -65,7 +65,7 @@ The `publish` directory contains exactly one self-contained executable. For deve
    - **Tracking Status** shows the current desktop, most recent poll, intervals, log location, and last tracking error.
    - **View Log JSON** and **Open Log Folder** provide direct access to persisted data.
 5. Use **Configure** to set up Timely, Clockify, project mappings, issue tracking, and mouse navigation.
-   - Use **Extras → Start tracking** to begin an explicit work session. Use **Stop tracking & upload to Clockify** to end it and upload its recorded desktop intervals.
+   - Use the top-level **Start tracking** action to begin an explicit work session. It turns the desktop display dark green. Use the top-level **Stop tracking & upload to Clockify** action to end it, restore the blue display, and upload its recorded desktop intervals.
    - Enable **Use mouse Back/Forward buttons to switch desktops** to map the dedicated Back button to the previous desktop and the Forward button to the next desktop. The order is cyclic: `1 → 2 → 3 → 1` and `1 → 3` when navigating back.
    - While enabled, the app consumes these two button presses globally; browsers and other applications will not also receive their normal Back/Forward action.
 
