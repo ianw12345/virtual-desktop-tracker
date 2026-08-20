@@ -34,13 +34,11 @@ Returns the name of the currently visible virtual desktop by:
 
 - Windows 10/11 with Virtual Desktop support
 - .NET 9.0 or later
-- VirtualDesktop11-24H2.exe must be available in one of the searched paths
+- Windows 11 24H2 (build 26100+) and a compiled `VirtualDesktop11-24H2.exe` during the application build
 
 ## Path Resolution
 
-The library searches for the VirtualDesktop executable in the following locations:
-- `../VirtualDesktop/VirtualDesktop11-24H2.exe` (relative to current directory)
-- Various paths relative to the application's base directory
+The library embeds `VirtualDesktop11-24H2.exe` during the build and extracts it to a private per-user cache on first use. This allows the published WinForms application to remain a single EXE while still launching the native helper as a subprocess.
 
 ## Error Handling
 

@@ -4,17 +4,12 @@
     <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <DebugType>none</DebugType>
+    <DebugSymbols>false</DebugSymbols>
   </PropertyGroup>
 
   <ItemGroup>
-    <Content Include="..\VirtualDesktop\VirtualDesktop11.exe">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      <Link>VirtualDesktop11.exe</Link>
-    </Content>
-    <Content Include="..\VirtualDesktop\VirtualDesktop11-24H2.exe">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      <Link>VirtualDesktop11-24H2.exe</Link>
-    </Content>
+    <EmbeddedResource Include="..\VirtualDesktop\VirtualDesktop11-24H2.exe" LogicalName="VirtualDesktopHelper.Resources.VirtualDesktop11-24H2.exe" />
   </ItemGroup>
 
 </Project>

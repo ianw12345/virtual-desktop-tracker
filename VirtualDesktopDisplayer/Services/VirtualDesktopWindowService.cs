@@ -1,8 +1,8 @@
 using System;
 using System.Diagnostics;
-using System.IO;
 using System.Runtime.InteropServices;
 using VirtualDesktopHelper.Configuration;
+using VirtualDesktopHelper.Services;
 
 namespace VirtualDesktopDisplayer.Services
 {
@@ -108,33 +108,6 @@ namespace VirtualDesktopDisplayer.Services
             SetWindowPos(windowHandle, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW);
         }
 
-        private string FindVirtualDesktopExecutable()
-        {
-            string startupPath = System.Windows.Forms.Application.StartupPath;
-            string[] possiblePaths = {
-                // The project copies these executables beside the application during the build.
-                Path.Combine(startupPath, "VirtualDesktop11-24H2.exe"),
-                Path.Combine(startupPath, "VirtualDesktop11.exe"),
-                // Keep the source-tree locations as a fallback for development runs.
-                Path.Combine(startupPath, "..", "..", "..", "VirtualDesktop", "VirtualDesktop11-24H2.exe"),
-                Path.Combine(startupPath, "..", "..", "..", "VirtualDesktop", "VirtualDesktop11.exe")
-            };
-
-            foreach (string path in possiblePaths)
-            {
-                try
-                {
-                    string fullPath = Path.GetFullPath(path);
-                    if (File.Exists(fullPath))
-                        return fullPath;
-                }
-                catch
-                {
-                    // Skip invalid paths
-                }
-            }
-
-            return "";
-        }
+        private static string FindVirtualDesktopExecutable() => VirtualDesktopExecutableProvider.GetPath();
     }
 }

@@ -7,9 +7,9 @@ echo - Automatically tracks and logs your desktop usage
 echo - Right-click for reports, working hours, and tracking status
 echo - Double-click to exit
 echo.
-set "APP=%~dp0VirtualDesktopDisplayer\bin\Release\net9.0-windows\VirtualDesktopDisplayer.exe"
+set "APP=%~dp0publish\VirtualDesktopDisplayer.exe"
 if not exist "%APP%" (
-    echo Release executable not found. Build it with: dotnet build virtual-desktop-tracker.sln --configuration Release
+    echo Release executable not found. Create it with: publish-single-file.bat
     pause
     exit /b 1
 )

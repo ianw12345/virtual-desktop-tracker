@@ -27,11 +27,11 @@ virtual-desktop-tracker/
 
 ## Requirements
 
-- Windows 10 or 11 with virtual desktops
+- Windows 11 24H2 or later (build 26100+)
 - .NET SDK 9.0 or later
 - The helper executables from [MScholtes/VirtualDesktop](https://github.com/MScholtes/VirtualDesktop)
 
-The display is pinned to all virtual desktops with `VirtualDesktop11-24H2.exe` (preferred) or `VirtualDesktop11.exe`. When the helpers are present in the repository's `VirtualDesktop` directory, the build copies them beside `VirtualDesktopDisplayer.exe` automatically.
+The application bundles the `VirtualDesktop11-24H2.exe` helper. At runtime it is extracted to a private per-user cache because Windows can execute native helpers only from a file. The published release remains a single EXE.
 
 ### Build the VirtualDesktop helper
 
@@ -39,21 +39,20 @@ From the repository root:
 
 ```powershell
 git clone https://github.com/MScholtes/VirtualDesktop.git VirtualDesktop
-& 'C:\Windows\Microsoft.NET\Framework\v4.0.30319\csc.exe' .\VirtualDesktop\VirtualDesktop11.cs /out:.\VirtualDesktop\VirtualDesktop11.exe /win32icon:.\VirtualDesktop\VirtualDesktop.ico
 & 'C:\Windows\Microsoft.NET\Framework\v4.0.30319\csc.exe' .\VirtualDesktop\VirtualDesktop11-24H2.cs /out:.\VirtualDesktop\VirtualDesktop11-24H2.exe /win32icon:.\VirtualDesktop\VirtualDesktop.ico
 ```
 
-Use `VirtualDesktop11.exe` instead on Windows versions for which the 24H2 helper is not compatible. GitHub Actions builds both helpers automatically to verify the solution.
+Only the 24H2 helper is supported. GitHub Actions builds and bundles it automatically.
 
 ## Build and start
 
 ```powershell
 dotnet restore .\virtual-desktop-tracker.sln
-dotnet build .\virtual-desktop-tracker.sln --configuration Release
-.\VirtualDesktopDisplayer\bin\Release\net9.0-windows\VirtualDesktopDisplayer.exe
+dotnet publish .\VirtualDesktopDisplayer\VirtualDesktopDisplayer.csproj --configuration Release --output .\publish
+.\publish\VirtualDesktopDisplayer.exe
 ```
 
-For development, run `.\run-displayer.bat`. For a built release, use `.\Run-VirtualDesktopDisplayer.bat`.
+The `publish` directory contains exactly one self-contained executable. For development, run `.\run-displayer.bat`; for a release, use `.\publish-single-file.bat` and then `.\Run-VirtualDesktopDisplayer.bat`.
 
 ## Using the app
 
@@ -94,11 +93,15 @@ The GitHub Actions workflow restores packages, compiles the VirtualDesktop helpe
 
 ### The desktop display is visible only on one desktop
 
-Ensure `VirtualDesktop11-24H2.exe` or `VirtualDesktop11.exe` is beside the application executable. Restart the app after adding or replacing the helper. The program also applies normal topmost window flags, but the helper is required to pin it across virtual desktops.
+This release supports only Windows 11 24H2 (build 26100+) and bundles its required helper. If the display is not pinned after an update, restart the app so it can refresh its private helper cache.
 
 ### The display shows an error or no desktop name
 
 Verify that the helper executable matches your Windows version and can be run from the application directory. Then open **Extras → Tracking Status** for the last recorded error.
+
+### The app reports an unsupported Windows version
+
+The application requires Windows 11 24H2, build 26100 or later. This is checked before the main window opens because the bundled desktop helper targets that Windows virtual-desktop API version.
 
 ### The Back/Forward mouse buttons do not switch desktops
 

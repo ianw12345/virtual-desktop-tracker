@@ -10,7 +10,7 @@ using VirtualDesktopHelper.Interfaces;
 namespace VirtualDesktopHelper.Services
 {
     /// <summary>
-    /// Windows virtual desktop name service that communicates with the VirtualDesktop.exe subprocess.
+    /// Windows virtual desktop name service that communicates with the bundled 24H2 helper subprocess.
     /// Provides reliable desktop name operations with error handling and retry mechanisms.
     /// </summary>
     public class WindowsDesktopNameService : IWindowsDesktopNameService
@@ -122,16 +122,7 @@ namespace VirtualDesktopHelper.Services
             if (_cachedExecutablePath != null && File.Exists(_cachedExecutablePath))
                 return _cachedExecutablePath;
 
-            // The executable is copied to the output directory during build
-            string baseDirectory = AppDomain.CurrentDomain.BaseDirectory;
-            string executablePath = Path.Combine(baseDirectory, _config.VirtualDesktopExecutableName);
-            
-            if (!File.Exists(executablePath))
-            {
-                throw new FileNotFoundException(
-                    $"VirtualDesktop executable '{_config.VirtualDesktopExecutableName}' not found in '{baseDirectory}'. " +
-                    $"Please ensure the executable is copied to the output directory during build.");
-            }
+            string executablePath = VirtualDesktopExecutableProvider.GetPath();
 
             _cachedExecutablePath = executablePath;
             return executablePath;

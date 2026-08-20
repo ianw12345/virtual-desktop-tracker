@@ -78,11 +78,6 @@ namespace VirtualDesktopHelper.Configuration
         public TimeSpan SubprocessTimeout { get; set; } = TimeSpan.FromSeconds(5);
 
         /// <summary>
-        /// Name of the VirtualDesktop executable to use.
-        /// </summary>
-        public string VirtualDesktopExecutableName { get; set; } = "VirtualDesktop11-24H2.exe";
-
-        /// <summary>
         /// Minimum duration in minutes for an activity to be kept separate during consolidation.
         /// Activities shorter than this will be merged with adjacent larger activities.
         /// </summary>

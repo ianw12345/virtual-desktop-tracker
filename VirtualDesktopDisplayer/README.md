@@ -16,9 +16,10 @@ From the repository root:
 
 ```powershell
 dotnet build .\virtual-desktop-tracker.sln --configuration Release
-.\VirtualDesktopDisplayer\bin\Release\net9.0-windows\VirtualDesktopDisplayer.exe
+dotnet publish .\VirtualDesktopDisplayer\VirtualDesktopDisplayer.csproj --configuration Release --output .\publish
+.\publish\VirtualDesktopDisplayer.exe
 ```
 
-The application uses `VirtualDesktop11-24H2.exe` or `VirtualDesktop11.exe` to retrieve, pin, rename, and switch virtual desktops. The `VirtualDesktopHelper` project copies the helpers from the repository's `VirtualDesktop` directory into the application output during the build.
+The release requires Windows 11 24H2 (build 26100+) and ships as one self-contained EXE. Its `VirtualDesktop11-24H2.exe` helper is embedded and extracted to a private cache only while needed, because Windows cannot launch a native helper directly from an assembly resource.
 
 For full setup, usage, reports, integrations, and troubleshooting, see the [root README](../README.md).
