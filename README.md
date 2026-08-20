@@ -65,6 +65,7 @@ The `publish` directory contains exactly one self-contained executable. For deve
    - **Tracking Status** shows the current desktop, most recent poll, intervals, log location, and last tracking error.
    - **View Log JSON** and **Open Log Folder** provide direct access to persisted data.
 5. Use **Configure** to set up Timely, Clockify, project mappings, issue tracking, and mouse navigation.
+   - Enable **Manual Clockify check-in/check-out** when desktop usage should be recorded only during an explicit work session. Use **Extras → Check in to Clockify** to begin and **Check out & upload to Clockify** to stop the session and upload its recorded desktop intervals.
    - Enable **Use mouse Back/Forward buttons to switch desktops** to map the dedicated Back button to the previous desktop and the Forward button to the next desktop. The order is cyclic: `1 → 2 → 3 → 1` and `1 → 3` when navigating back.
    - While enabled, the app consumes these two button presses globally; browsers and other applications will not also receive their normal Back/Forward action.
 
@@ -81,6 +82,7 @@ The report dialog creates `usage_report_YYYY-MM-DD.txt` and `usage_report_YYYY-M
 - [Issue tracking setup](ISSUE_TRACKING.md) explains regex patterns and issue URL templates.
 - Timely is configured from the app with **Configure → Timely**. It retains the existing cookie-based integration.
 - Clockify is configured from the app with **Configure → Clockify**. Enter an API key, choose the workspace and default project, then use **Desktop assignments…** to map named virtual desktops to different Clockify projects. An exact desktop-name assignment overrides the default project. Use **Upload to Clockify** to create one regular time entry per consolidated desktop interval; the entry description is `Virtual desktop: <desktop name>`.
+- With **Manual Clockify check-in/check-out** enabled, automatic local tracking is paused outside a checked-in session. Checking out first stops and saves the current desktop interval, then uploads all entries from that check-in onward to Clockify.
 - Clockify uses its public v1 API and an `X-Api-Key` header. The key is not written to the usage log or error messages. See the [Clockify API documentation](https://docs.clockify.me/).
 
 ## Test and CI

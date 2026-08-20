@@ -47,5 +47,22 @@ namespace VirtualDesktopHelper.Tests.Services
             usageTracker.Verify(tracker => tracker.TrackDesktopUsage("Screen Off"), Times.Once);
             desktopNames.Verify(service => service.GetCurrentDesktopName(), Times.Never);
         }
+
+        [Fact]
+        public void Stop_AllowsTheCurrentDesktopToStartANewManualSession()
+        {
+            var desktopNames = new Mock<IWindowsDesktopNameService>();
+            var screenState = new Mock<IScreenStateDetector>();
+            var usageTracker = new Mock<IDesktopUsageTracker>();
+            desktopNames.Setup(service => service.GetCurrentDesktopName()).Returns("Development");
+            var coordinator = new DesktopTrackingCoordinator(desktopNames.Object, screenState.Object, usageTracker.Object);
+
+            coordinator.Poll();
+            coordinator.Stop();
+            coordinator.Poll();
+
+            usageTracker.Verify(tracker => tracker.StopTracking(), Times.Once);
+            usageTracker.Verify(tracker => tracker.TrackDesktopUsage("Development"), Times.Exactly(2));
+        }
     }
 }

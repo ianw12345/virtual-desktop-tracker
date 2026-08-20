@@ -28,6 +28,17 @@ namespace VirtualDesktopHelper.Configuration
         public bool EnableMouseDesktopNavigation { get; set; } = false;
 
         /// <summary>
+        /// Whether desktop usage is recorded only between a manual Clockify check-in and check-out.
+        /// </summary>
+        public bool EnableManualClockifyTracking { get; set; } = false;
+
+        /// <summary>
+        /// Start of the active manual Clockify session. It is persisted so an unexpected app restart
+        /// does not silently discard the intended upload range.
+        /// </summary>
+        public DateTime? ClockifyCheckInStartedAt { get; set; }
+
+        /// <summary>
         /// How long user must be idle before considering screen "off".
         /// </summary>
         public TimeSpan ScreenOffIdleThreshold { get; set; } = TimeSpan.FromMinutes(10);

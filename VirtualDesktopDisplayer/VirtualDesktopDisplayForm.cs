@@ -43,6 +43,7 @@ namespace VirtualDesktopDisplayer
         private DesktopTrackingUpdate _lastTrackingUpdate = DesktopTrackingUpdate.Unknown;
         private DateTime _lastTrackingUpdateAt = DateTime.MinValue;
         private int _mouseNavigationInProgress;
+        private bool IsManualClockifySessionActive => _config.ClockifyCheckInStartedAt.HasValue;
 
         public VirtualDesktopDisplayForm(
             IWindowsDesktopNameService? desktopNameService = null,
@@ -177,7 +178,18 @@ namespace VirtualDesktopDisplayer
                 if (_isRenameMode)
                     return;
 
-                DesktopTrackingUpdate trackingUpdate = _trackingCoordinator.Poll();
+                DesktopTrackingUpdate trackingUpdate;
+                if (_config.EnableManualClockifyTracking && !IsManualClockifySessionActive)
+                {
+                    string currentDesktopName = _screenStateDetector.IsScreenLockedOrOff()
+                        ? "Screen Off"
+                        : _desktopNameService.GetCurrentDesktopName();
+                    trackingUpdate = new DesktopTrackingUpdate(currentDesktopName, string.Empty, false, null);
+                }
+                else
+                {
+                    trackingUpdate = _trackingCoordinator.Poll();
+                }
                 _lastTrackingUpdate = trackingUpdate;
                 _lastTrackingUpdateAt = DateTime.Now;
                 if (!string.IsNullOrEmpty(trackingUpdate.ErrorMessage))
@@ -349,6 +361,12 @@ namespace VirtualDesktopDisplayer
             extrasMenu.DropDownItems.Add("Copy Timely JavaScript", null, OnCopyJavaScriptClick);
             extrasMenu.DropDownItems.Add("Upload to Timely (from time...)", null, OnUploadToTimelyFromTimeClick);
             extrasMenu.DropDownItems.Add("Upload to Clockify (from time...)", null, OnUploadToClockifyFromTimeClick);
+            extrasMenu.DropDownItems.Add(new ToolStripSeparator());
+            if (_config.EnableManualClockifyTracking)
+            {
+                extrasMenu.DropDownItems.Add(IsManualClockifySessionActive ? "Check out & upload to Clockify" : "Check in to Clockify", null,
+                    IsManualClockifySessionActive ? OnClockifyCheckOutClick : OnClockifyCheckInClick);
+            }
             contextMenu.Items.Add(extrasMenu);
             
             // Group configure options under a single 'Configure' menu
@@ -356,6 +374,13 @@ namespace VirtualDesktopDisplayer
             configureMenu.DropDownItems.Add("Timely", null, OnConfigureTimelyClick);
             configureMenu.DropDownItems.Add("Clockify", null, OnConfigureClockifyClick);
             configureMenu.DropDownItems.Add("Projects", null, OnConfigureProjectsClick);
+            var manualTrackingItem = new ToolStripMenuItem("Manual Clockify check-in/check-out")
+            {
+                Checked = _config.EnableManualClockifyTracking,
+                CheckOnClick = true
+            };
+            manualTrackingItem.Click += OnManualClockifyTrackingSettingClick;
+            configureMenu.DropDownItems.Add(manualTrackingItem);
             configureMenu.DropDownItems.Add("Issue Tracking", null, OnConfigureIssueTrackingClick);
             var mouseNavigationItem = new ToolStripMenuItem("Use mouse Back/Forward buttons to switch desktops")
             {
@@ -999,6 +1024,92 @@ namespace VirtualDesktopDisplayer
             }
 
             ApplyMouseDesktopNavigation(menuItem.Checked, showError: true);
+        }
+
+        private void OnManualClockifyTrackingSettingClick(object? sender, EventArgs e)
+        {
+            if (sender is not ToolStripMenuItem menuItem)
+            {
+                return;
+            }
+
+            if (!menuItem.Checked && IsManualClockifySessionActive)
+            {
+                menuItem.Checked = true;
+                _applicationService.ShowWarning("Check out of Clockify before disabling manual tracking.");
+                return;
+            }
+
+            _config.EnableManualClockifyTracking = menuItem.Checked;
+            if (menuItem.Checked)
+            {
+                _trackingCoordinator.Stop();
+                ShowToastNotification("Manual Clockify tracking enabled. Check in when you start work.");
+            }
+            else
+            {
+                ShowToastNotification("Manual Clockify tracking disabled. Automatic tracking resumed.");
+                UpdateDesktopName();
+            }
+
+            _config.SaveConfiguration();
+        }
+
+        private void OnClockifyCheckInClick(object? sender, EventArgs e)
+        {
+            try
+            {
+                if (!ClockifyConfiguration.Instance.IsConfigured())
+                {
+                    _applicationService.ShowWarning("Configure Clockify before checking in.");
+                    ShowClockifyConfigurationDialog();
+                    return;
+                }
+
+                _trackingCoordinator.Stop();
+                _config.ClockifyCheckInStartedAt = DateTime.Now;
+                _config.SaveConfiguration();
+                UpdateDesktopName();
+                ShowToastNotification($"Checked in to Clockify at {_config.ClockifyCheckInStartedAt:HH:mm}.");
+            }
+            catch (Exception ex)
+            {
+                _applicationService.ShowError($"Could not check in to Clockify: {ex.Message}");
+            }
+        }
+
+        private async void OnClockifyCheckOutClick(object? sender, EventArgs e)
+        {
+            if (!IsManualClockifySessionActive)
+            {
+                return;
+            }
+
+            DateTime checkInStartedAt = _config.ClockifyCheckInStartedAt!.Value;
+            try
+            {
+                UpdateDesktopName();
+                _trackingCoordinator.Stop();
+                _config.ClockifyCheckInStartedAt = null;
+                _config.SaveConfiguration();
+
+                List<DesktopUsageEntry> entries = _usageTracker.GetAllUsageHistory();
+                using var service = new ClockifyApiService();
+                ClockifyUploadResult result = await service.UploadAsync(entries, currentDayOnly: false, fromTime: checkInStartedAt);
+                if (result.Success)
+                {
+                    ShowToastNotification($"Checked out. Uploaded {result.SuccessCount} Clockify entries.");
+                }
+                else
+                {
+                    string details = result.Errors.Any() ? "\n\n" + string.Join("\n", result.Errors.Take(10)) : string.Empty;
+                    _applicationService.ShowError($"Checked out, but Clockify upload failed.{details}");
+                }
+            }
+            catch (Exception ex)
+            {
+                _applicationService.ShowError($"Checked out, but Clockify upload failed: {ex.Message}");
+            }
         }
 
         private void ApplyMouseDesktopNavigation(bool enabled, bool showError)

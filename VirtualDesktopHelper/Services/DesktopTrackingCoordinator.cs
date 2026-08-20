@@ -76,7 +76,11 @@ namespace VirtualDesktopHelper.Services
             }
         }
 
-        public void Stop() => _usageTracker.StopTracking();
+        public void Stop()
+        {
+            _usageTracker.StopTracking();
+            _lastDesktopName = string.Empty;
+        }
     }
 
     public sealed record DesktopTrackingUpdate(
