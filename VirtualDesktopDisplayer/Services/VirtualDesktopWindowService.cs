@@ -72,19 +72,19 @@ namespace VirtualDesktopDisplayer.Services
                 if (string.IsNullOrEmpty(virtualDesktopExe))
                     return false;
 
-                // Pin this window to all desktops using external executable
+                // Pin this window to all desktops using its window handle.
+                // /PinWindow expects a process name or ID; this.Handle is an HWND.
                 using (var process = Process.Start(new ProcessStartInfo
                 {
                     FileName = virtualDesktopExe,
-                    Arguments = $"/PinWindow:{windowHandle}",
+                    Arguments = $"/PinWindowHandle:{windowHandle}",
                     WindowStyle = ProcessWindowStyle.Hidden,
                     CreateNoWindow = true,
                     UseShellExecute = false
                 }))
                 {
-                    if (process != null)
+                    if (process != null && process.WaitForExit((int)_config.SubprocessTimeout.TotalMilliseconds))
                     {
-                        process.WaitForExit((int)_config.SubprocessTimeout.TotalMilliseconds);
                         return process.ExitCode == 0;
                     }
                 }
@@ -110,9 +110,14 @@ namespace VirtualDesktopDisplayer.Services
 
         private string FindVirtualDesktopExecutable()
         {
+            string startupPath = System.Windows.Forms.Application.StartupPath;
             string[] possiblePaths = {
-                Path.Combine(System.Windows.Forms.Application.StartupPath, "..", "..", "..", "VirtualDesktop", "VirtualDesktop11-24H2.exe"),
-                Path.Combine(System.Windows.Forms.Application.StartupPath, "..", "..", "..", "VirtualDesktop", "VirtualDesktop.exe")
+                // The project copies these executables beside the application during the build.
+                Path.Combine(startupPath, "VirtualDesktop11-24H2.exe"),
+                Path.Combine(startupPath, "VirtualDesktop11.exe"),
+                // Keep the source-tree locations as a fallback for development runs.
+                Path.Combine(startupPath, "..", "..", "..", "VirtualDesktop", "VirtualDesktop11-24H2.exe"),
+                Path.Combine(startupPath, "..", "..", "..", "VirtualDesktop", "VirtualDesktop11.exe")
             };
 
             foreach (string path in possiblePaths)
