@@ -266,6 +266,7 @@ namespace VirtualDesktopDisplayer
         {
             updateTimer?.Stop();
             updateTimer?.Dispose();
+            _usageTracker.StopTracking();
             base.OnFormClosing(e);
         }
 

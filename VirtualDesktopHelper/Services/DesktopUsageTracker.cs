@@ -15,6 +15,11 @@ namespace VirtualDesktopHelper.Services
     /// </summary>
     public class DesktopUsageTracker : IDesktopUsageTracker
     {
+        private static readonly JsonSerializerOptions JsonOptions = new()
+        {
+            WriteIndented = true
+        };
+
         private readonly TrackerConfiguration _config;
         private readonly IWindowsDesktopNameService _desktopNameService;
         private readonly IVirtualDesktopErrorHandler _errorHandler;
@@ -204,12 +209,7 @@ namespace VirtualDesktopHelper.Services
         {
             try
             {
-                var options = new JsonSerializerOptions
-                {
-                    WriteIndented = true
-                };
-                string json = JsonSerializer.Serialize(_currentSessionUsageLog, options);
-                File.WriteAllText(_logFilePath, json);
+                SaveUsageLogToFile(_currentSessionUsageLog, _logFilePath);
             }
             catch (Exception ex)
             {
@@ -392,12 +392,24 @@ namespace VirtualDesktopHelper.Services
         /// <param name="filePath">The file path to save to.</param>
         private void SaveUsageLogToFile(List<DesktopUsageEntry> entries, string filePath)
         {
-            var options = new JsonSerializerOptions
+            string? directory = Path.GetDirectoryName(filePath);
+            if (string.IsNullOrEmpty(directory))
+                throw new InvalidOperationException($"Log file path has no directory: {filePath}");
+
+            Directory.CreateDirectory(directory);
+
+            string temporaryFilePath = Path.Combine(directory, $".{Path.GetFileName(filePath)}.{Guid.NewGuid():N}.tmp");
+            try
             {
-                WriteIndented = true
-            };
-            string json = JsonSerializer.Serialize(entries, options);
-            File.WriteAllText(filePath, json);
+                string json = JsonSerializer.Serialize(entries, JsonOptions);
+                File.WriteAllText(temporaryFilePath, json);
+                File.Move(temporaryFilePath, filePath, overwrite: true);
+            }
+            finally
+            {
+                if (File.Exists(temporaryFilePath))
+                    File.Delete(temporaryFilePath);
+            }
         }
     }
 }

@@ -45,6 +45,11 @@ namespace VirtualDesktopHelper.Interfaces
         Task GenerateUsageReportAsync();
 
         /// <summary>
+        /// Closes and persists the currently active desktop session.
+        /// </summary>
+        void StopTracking();
+
+        /// <summary>
         /// Updates the desktop name for all entries with the specified old name from today only.
         /// This also renames the current desktop if it matches the old name.
         /// </summary>

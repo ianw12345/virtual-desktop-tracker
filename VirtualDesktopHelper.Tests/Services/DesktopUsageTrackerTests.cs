@@ -194,6 +194,27 @@ namespace VirtualDesktopHelper.Tests.Services
         }
 
         [Fact]
+        public void StopTracking_ShouldCloseAndPersistTheActiveSession()
+        {
+            // Arrange
+            var tracker = new DesktopUsageTracker(_testConfig);
+            tracker.TrackDesktopUsage("Desktop1");
+
+            // Act
+            tracker.StopTracking();
+
+            // Assert
+            var sessionLog = tracker.GetCurrentSessionUsageLog();
+            sessionLog.Should().ContainSingle();
+            sessionLog[0].IsActive.Should().BeFalse();
+
+            var persistedEntries = System.Text.Json.JsonSerializer.Deserialize<List<DesktopUsageEntry>>(
+                File.ReadAllText(tracker.GetCurrentLogFilePath()));
+            persistedEntries.Should().ContainSingle();
+            persistedEntries![0].EndTime.Should().NotBeNull();
+        }
+
+        [Fact]
         public void GetAllUsageHistory_ShouldReturnEmptyList_WhenNoLogFilesExist()
         {
             // Arrange
